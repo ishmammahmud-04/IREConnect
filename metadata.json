@@ -1,0 +1,6 @@
+{
+  "name": "IRE Network",
+  "description": "Private Professional, Academic & Alumni Network for the Internet of Things and Robotics Engineering (IRE) Department.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
