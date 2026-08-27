@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 
 export const AdminControlSuite: React.FC = () => {
   const {
+    currentUser,
     adminVerificationQueue = [],
     verificationRequests = [],
     approveVerification,
@@ -13,8 +14,11 @@ export const AdminControlSuite: React.FC = () => {
     resolveModerationReport,
     publishAnnouncement,
     addAnnouncement,
-    showToast
+    showToast,
+    networkStats
   } = useApp();
+
+  if (currentUser.role !== 'admin') return null;
 
   const activeQueue = adminVerificationQueue.length > 0 ? adminVerificationQueue : verificationRequests;
   const activeReports = flaggedItems.length > 0 ? flaggedItems : moderationReports;
@@ -60,7 +64,7 @@ export const AdminControlSuite: React.FC = () => {
       <div>
         <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-rose-50 text-rose-700 text-[10px] font-bold tracking-widest uppercase border border-rose-200 mb-1.5">
           <span className="material-symbols-outlined text-[13px]">security</span>
-          <span>Department Administrator Suite</span>
+          <span>Department Administration</span>
         </div>
         <h1 className="font-heading text-[24px] md:text-[32px] font-extrabold text-slate-900 tracking-tight leading-tight">
           Admin &amp; Moderation Operations
@@ -117,7 +121,7 @@ export const AdminControlSuite: React.FC = () => {
           }`}
         >
           <span className="material-symbols-outlined text-[16px]">insights</span>
-          <span>Ecosystem Analytics</span>
+          <span>Statistics</span>
         </button>
       </div>
 
@@ -134,7 +138,7 @@ export const AdminControlSuite: React.FC = () => {
           {pendingQueue.length > 0 ? (
             pendingQueue.map((item: any) => {
               const userName = item.userName || item.user?.name || 'Academic User';
-              const userAvatar = item.avatar || item.user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80';
+              const userAvatar = item.avatar || item.user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=64748b&color=fff`;
               const userEmail = item.email || item.user?.email || 'user@university.edu';
               const requestedRole = item.requestedRole || item.user?.role || 'student';
               const batch = item.batch || item.user?.batch || 'Batch 7';
@@ -345,23 +349,23 @@ export const AdminControlSuite: React.FC = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-0.5 shadow-2xs">
               <span className="text-[10px] font-bold uppercase text-slate-500 font-mono">Verified Students</span>
-              <p className="text-xl md:text-2xl font-extrabold font-mono text-slate-900">1,240</p>
+              <p className="text-xl md:text-2xl font-extrabold font-mono text-slate-900">{networkStats.students}</p>
               <span className="text-[10px] text-emerald-600 font-bold">+18% this semester</span>
             </div>
             <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-0.5 shadow-2xs">
               <span className="text-[10px] font-bold uppercase text-slate-500 font-mono">Alumni Enrolled</span>
-              <p className="text-xl md:text-2xl font-extrabold font-mono text-slate-900">3,520</p>
+              <p className="text-xl md:text-2xl font-extrabold font-mono text-slate-900">{networkStats.alumni}</p>
               <span className="text-[10px] text-blue-600 font-bold">Across 42 Countries</span>
             </div>
             <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-0.5 shadow-2xs">
               <span className="text-[10px] font-bold uppercase text-slate-500 font-mono">Active Projects</span>
-              <p className="text-xl md:text-2xl font-extrabold font-mono text-slate-900">450</p>
+              <p className="text-xl md:text-2xl font-extrabold font-mono text-slate-900">{networkStats.projects}</p>
               <span className="text-[10px] text-emerald-600 font-bold">89 IEEE published</span>
             </div>
             <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-0.5 shadow-2xs">
               <span className="text-[10px] font-bold uppercase text-slate-500 font-mono">Mentorship Hours</span>
-              <p className="text-xl md:text-2xl font-extrabold font-mono text-slate-900">940 hrs</p>
-              <span className="text-[10px] text-amber-600 font-bold">142 active pairings</span>
+              <p className="text-xl md:text-2xl font-extrabold font-mono text-slate-900">Available soon</p>
+              <span className="text-[10px] text-amber-600 font-bold">Mentoring records</span>
             </div>
           </div>
 

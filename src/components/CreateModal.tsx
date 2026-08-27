@@ -44,12 +44,12 @@ export const CreateModal: React.FC = () => {
         problem: 'Real-time sensor latency and state estimation in unstructured domains.',
         solution: desc,
         technologies: tagArray.length ? tagArray : ['ROS2', 'Python', 'SLAM'],
-        coverImage: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=800&auto=format&fit=crop&q=80',
+        coverImage: '',
         supervisor: {
           id: 'faculty-1',
-          name: 'Dr. Elena Rossi',
-          designation: 'Professor of Robotics',
-          avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBgOGZj8HWKLLzxuYNF87_mV90sB7EpQ2qveajHTqIiMBO54cvKdOyNYGxalRJh-785QcWWJsmGS16fZOtVy8SmyzrIKH5mvvMZMPWwEiL1s5CSbu2cwJ_D1FHfAyLEiohba15xIpx6rZpidAv2jbvVaX8Wp17gF4GLd5sbIAp6JQiSAAyIWeYBh5vfW1rk25cn0lFiYTm6in1m-Vu7acXo9fWYxiUUY0A1ybOUC6SxLU_XTu6VIeH3DA'
+           name: currentUser.name,
+           designation: currentUser.headline,
+           avatar: currentUser.avatar
         },
         teamMembers: [
           {
@@ -65,28 +65,28 @@ export const CreateModal: React.FC = () => {
     } else if (contentType === 'publication') {
       createPublication({
         title,
-        authors: [currentUser.name, 'Dr. Elena Rossi'],
-        journal: secondaryField || 'IEEE Transactions on Robotics',
+        authors: [currentUser.name],
+        journal: secondaryField || 'Publication venue',
         doi: '10.1109/TRO.2026.994411',
         publicationType: 'Journal',
         status: 'Published',
         abstract: desc,
         keywords: tagArray.length ? tagArray : ['Robotics', 'Autonomy'],
         date: 'May 2026',
-        coverImage: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&auto=format&fit=crop&q=80'
+        coverImage: ''
       });
     } else if (contentType === 'achievement') {
       createAchievement({
         title,
         category: category || 'Award',
-        organization: secondaryField || 'National Robotics Council',
+        organization: secondaryField || 'Organization',
         date: 'May 2026',
         description: desc,
         appliedSkills: tagArray.length ? tagArray : ['Robotics', 'Leadership'],
         personName: currentUser.name,
         personRole: currentUser.headline,
         personAvatar: currentUser.avatar,
-        image: 'https://images.unsplash.com/photo-1579389083078-4e7018379f7e?w=800&auto=format&fit=crop&q=80'
+        image: ''
       });
     } else if (contentType === 'article') {
       createArticle({
@@ -101,7 +101,7 @@ export const CreateModal: React.FC = () => {
         },
         date: 'May 2026',
         readingTime: '5 min read',
-        coverImage: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&auto=format&fit=crop&q=80',
+        coverImage: '',
         tags: tagArray.length ? tagArray : ['Engineering', 'IRE'],
         body: [desc, 'This study provides empirical benchmarks and real-world deployment telemetry recorded in our department laboratory.']
       });
@@ -109,7 +109,7 @@ export const CreateModal: React.FC = () => {
       createOpportunity({
         title,
         type: (category as any) || 'Internship',
-        organization: secondaryField || 'Robotics Innovation Labs',
+        organization: secondaryField || 'Organization',
         location: 'Hybrid / IRE Innovation Hub',
         deadline: 'June 30, 2026',
         description: desc,
@@ -245,7 +245,7 @@ export const CreateModal: React.FC = () => {
               type="submit"
               className="px-4 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-colors shadow-2xs"
             >
-              Publish to IRE Ecosystem
+              Publish to Department
             </button>
           </div>
         </form>

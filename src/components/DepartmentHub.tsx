@@ -10,7 +10,8 @@ export const DepartmentHub: React.FC = () => {
     setSelectedAchievement,
     setSelectedUserForProfile,
     toggleEventRsvp,
-    showToast
+    showToast,
+    networkStats
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'announcements' | 'events' | 'hall_of_fame' | 'history'>('announcements');
@@ -30,13 +31,13 @@ export const DepartmentHub: React.FC = () => {
       {/* Header */}
       <div>
         <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-bold uppercase tracking-widest border border-blue-200 mb-1.5">
-          Department Resources &amp; Archives
+          Department Information
         </div>
         <h1 className="font-heading text-[24px] md:text-[32px] font-extrabold text-slate-900 tracking-tight leading-tight">
-          Department Information Hub
+          Department Information
         </h1>
         <p className="text-xs md:text-sm text-slate-600 mt-0.5">
-          Internet of Things &amp; Robotics Engineering (IRE) notices, symposium events, historical archives, and laureates.
+          Notices, events, department history, and student achievements.
         </p>
       </div>
 
@@ -282,7 +283,7 @@ export const DepartmentHub: React.FC = () => {
                 Founded in 2018, the Department of Internet of Things and Robotics Engineering (IRE) was established to pioneer interdisciplinary education bridging mechatronics, embedded sensors, distributed systems, and real-time artificial intelligence.
               </p>
               <p>
-                Over the past decade, IRE has trained over 1,200 specialized engineers, built state-of-the-art Autonomous Systems, UAV Flight Cages, and Cyber-Physical Security testing chambers, and published 450+ indexed peer-reviewed studies.
+                The department network grows with every verified member and published project, alongside its research labs and academic community.
               </p>
             </div>
 
@@ -303,7 +304,7 @@ export const DepartmentHub: React.FC = () => {
                 <div className="pl-7 relative">
                   <div className="w-2 h-2 rounded-full bg-blue-600 absolute left-[7px] top-1 ring-3 ring-white"></div>
                   <h4 className="font-bold text-xs text-slate-900">2026 — Private IREConnect Digital Network Launch</h4>
-                  <p className="text-xs text-slate-500">Connecting 3,500+ global alumni, students, and research faculty.</p>
+                  <p className="text-xs text-slate-500">{networkStats.alumni + networkStats.students}+ students and alumni in the department community.</p>
                 </div>
               </div>
             </div>

@@ -20,13 +20,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
     setIsLinkedInModalOpen,
     openMentorshipRequest,
     sendConnectionRequest,
-    showToast
+    showToast,
+    getConnectionCount
   } = useApp();
 
   const user = userOverride || currentUser;
   const isOwnProfile = user.id === currentUser.id;
-
-  // Route to specialized Faculty view if role is faculty or former_faculty
   if (user.role === 'faculty' || user.role === 'former_faculty') {
     return <FacultyProfileView facultyUser={user} onBack={onBack} />;
   }
@@ -65,7 +64,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
 
       {/* Profile Header Identity Card */}
       <section className="bg-white rounded-xl border border-slate-200 shadow-2xs p-5 md:p-6 relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-20 bg-slate-900"></div>
+        <div className="absolute top-0 left-0 w-full h-20 bg-slate-900">
+          {user.bannerUrl && <img src={user.bannerUrl} alt="Profile banner" className="w-full h-full object-cover" />}
+        </div>
 
         <div className="relative z-10 flex flex-col md:flex-row items-center md:items-end gap-5 pt-4">
           <div className="relative">
@@ -95,14 +96,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
               </span>
             </div>
 
-            <p className="text-xs font-mono font-bold text-blue-600">
-              {user.batch || user.role.toUpperCase()} • Class of {user.graduationYear || '2026'}
-            </p>
-            <p className="text-xs md:text-sm text-slate-700 font-medium">{user.headline}</p>
-            <p className="text-xs text-slate-500 flex items-center justify-center md:justify-start gap-1">
-              <span className="material-symbols-outlined text-[14px]">location_on</span>
-              {user.location}
-            </p>
+            {user.bio && <p className="text-xs md:text-sm text-slate-700 leading-relaxed max-w-xl">{user.bio}</p>}
+            {user.headline && <p className="text-xs text-slate-500">{user.headline}</p>}
           </div>
 
           <div className="flex flex-wrap gap-2 shrink-0 justify-center">
@@ -150,7 +145,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
         <div className="grid grid-cols-4 gap-2 border-t border-slate-100 mt-5 pt-3 text-center">
           <div>
             <span className="text-base md:text-lg font-mono font-bold text-slate-900 block">
-              {user.mutualConnectionsCount || 500}+
+              {getConnectionCount(user.id)}
             </span>
             <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Connections</span>
           </div>
@@ -230,10 +225,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
             </p>
             <div className="flex flex-col gap-1.5 pt-1">
               <button
-                onClick={() => showToast('Opening PDF viewer for Sarah Chen CV...')}
+                onClick={() => showToast('Opening CV viewer...')}
                 className="w-full py-1.5 px-3 rounded-lg bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 shadow-2xs"
               >
-                <span className="material-symbols-outlined text-[15px]">visibility</span>
+                 <span className="material-symbols-outlined text-[15px]">visibility</span>
                 <span>View CV (PDF)</span>
               </button>
               <button

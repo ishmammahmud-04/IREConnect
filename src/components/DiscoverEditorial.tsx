@@ -74,7 +74,7 @@ export const DiscoverEditorial: React.FC = () => {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-3">
           <div>
             <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-bold uppercase tracking-widest border border-blue-200 mb-1.5">
-              Knowledge Repository
+              Department Library
             </div>
             <h1 className="font-heading text-[24px] md:text-[32px] font-extrabold text-slate-900 tracking-tight leading-tight">
               Discover &amp; Publications

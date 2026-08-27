@@ -34,7 +34,7 @@ export const Sidebar: React.FC = () => {
 
       {/* Main Nav Items */}
       <div className="space-y-0.5">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-3 py-1.5">Ecosystem</p>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-3 py-1.5">Navigation</p>
         {links.map((link) => {
           const isActive = currentTab === link.tab;
           return (
@@ -68,7 +68,7 @@ export const Sidebar: React.FC = () => {
           className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs text-slate-300 hover:bg-slate-800 hover:text-white transition-colors text-left"
         >
           <span className="material-symbols-outlined text-[16px] text-blue-400">add_circle</span>
-          <span>+ Create Content</span>
+          <span>Create Content</span>
         </button>
 
         <button
@@ -76,7 +76,7 @@ export const Sidebar: React.FC = () => {
           className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs text-slate-300 hover:bg-slate-800 hover:text-white transition-colors text-left"
         >
           <span className="material-symbols-outlined text-[16px] text-sky-400">sync</span>
-          <span>LinkedIn Sync Review</span>
+          <span>LinkedIn Sync</span>
         </button>
 
         <button
@@ -87,23 +87,25 @@ export const Sidebar: React.FC = () => {
           <span>Saved Bookmarks</span>
         </button>
 
-        <button
-          onClick={() => setCurrentTab('admin')}
-          className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs transition-colors text-left ${
-            currentTab === 'admin'
-              ? 'bg-blue-600 text-white font-bold shadow-xs'
-              : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-          }`}
-        >
-          <span className="material-symbols-outlined text-[16px] text-indigo-400">admin_panel_settings</span>
-          <span>Admin Control Suite</span>
-        </button>
+        {currentUser.role === 'admin' && (
+          <button
+            onClick={() => setCurrentTab('admin')}
+            className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs transition-colors text-left ${
+              currentTab === 'admin'
+                ? 'bg-blue-600 text-white font-bold shadow-xs'
+                : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[16px] text-indigo-400">admin_panel_settings</span>
+            <span>Administration</span>
+          </button>
+        )}
       </div>
 
       {/* Department Summary Footer */}
       <div className="mt-auto pt-4 border-t border-slate-800 text-[10px] text-slate-400 px-3">
         <p className="font-bold text-slate-200">IRE Department Network</p>
-        <p className="text-slate-500 font-mono">Academic Archive 2026</p>
+        <p className="text-slate-500 font-mono">Department community</p>
       </div>
     </aside>
   );

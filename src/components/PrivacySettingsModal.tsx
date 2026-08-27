@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { VisibilityLevel, PrivacySettings, NotificationSettings } from '../types';
 
@@ -7,8 +7,12 @@ export const PrivacySettingsModal: React.FC = () => {
     isSettingsModalOpen,
     setIsSettingsModalOpen,
     currentUser,
-    setCurrentUser,
-    showToast
+    updateUserPrivacy,
+    updateNotificationSettings,
+    updateProfileBio,
+    showToast,
+    updateProfileImage,
+    isUploadingProfileImage
   } = useApp();
 
   const [cvVis, setCvVis] = useState<VisibilityLevel>('department');
@@ -16,11 +20,72 @@ export const PrivacySettingsModal: React.FC = () => {
   const [phoneVis, setPhoneVis] = useState<VisibilityLevel>('connections');
   const [projectsVis, setProjectsVis] = useState<VisibilityLevel>('public');
   const [experienceVis, setExperienceVis] = useState<VisibilityLevel>('public');
+  const [shortBio, setShortBio] = useState('');
   
   const [allowMentorship, setAllowMentorship] = useState<boolean>(true);
   const [notifAnnouncements, setNotifAnnouncements] = useState<boolean>(true);
   const [notifOpportunityAlerts, setNotifOpportunityAlerts] = useState<boolean>(true);
   const [notifConnectionRequests, setNotifConnectionRequests] = useState<boolean>(true);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
+  const cameraVideoRef = useRef<HTMLVideoElement>(null);
+  const cameraStreamRef = useRef<MediaStream | null>(null);
+  const [cameraType, setCameraType] = useState<'avatar' | 'banner' | null>(null);
+
+  const handleImageSelected = async (event: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'banner') => {
+    const file = event.target.files?.[0];
+    if (file) await updateProfileImage(file, type);
+    event.target.value = '';
+  };
+
+  useEffect(() => {
+    if (cameraType && cameraVideoRef.current && cameraStreamRef.current) {
+      cameraVideoRef.current.srcObject = cameraStreamRef.current;
+    }
+  }, [cameraType]);
+
+  useEffect(() => {
+    if (!isSettingsModalOpen) closeCamera();
+    return () => cameraStreamRef.current?.getTracks().forEach((track) => track.stop());
+  }, [isSettingsModalOpen]);
+
+  const openCamera = async (type: 'avatar' | 'banner') => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      showToast('Camera access is not available in this browser.');
+      return;
+    }
+    try {
+      cameraStreamRef.current?.getTracks().forEach((track) => track.stop());
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: type === 'avatar' ? 'user' : 'environment' }, audio: false });
+      cameraStreamRef.current = stream;
+      setCameraType(type);
+      if (cameraVideoRef.current) cameraVideoRef.current.srcObject = stream;
+    } catch {
+      showToast('Camera permission was denied or the camera is unavailable.');
+    }
+  };
+
+  const closeCamera = () => {
+    cameraStreamRef.current?.getTracks().forEach((track) => track.stop());
+    cameraStreamRef.current = null;
+    setCameraType(null);
+  };
+
+  const captureCameraImage = async () => {
+    if (!cameraVideoRef.current || !cameraType) return;
+    const video = cameraVideoRef.current;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d')?.drawImage(video, 0, 0);
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+    if (!blob) {
+      showToast('Could not capture the camera image.');
+      return;
+    }
+    await updateProfileImage(new File([blob], `${cameraType}-${Date.now()}.jpg`, { type: 'image/jpeg' }), cameraType);
+    closeCamera();
+  };
 
   // Sync state when modal opens or currentUser changes
   useEffect(() => {
@@ -30,6 +95,7 @@ export const PrivacySettingsModal: React.FC = () => {
       setPhoneVis(currentUser.privacy?.phone || 'connections');
       setProjectsVis(currentUser.privacy?.projects || 'public');
       setExperienceVis(currentUser.privacy?.experience || 'public');
+      setShortBio(currentUser.bio || '');
       setAllowMentorship(currentUser.isAvailableForMentorship ?? true);
       setNotifAnnouncements(currentUser.notificationSettings?.announcements ?? true);
       setNotifOpportunityAlerts(currentUser.notificationSettings?.opportunityAlerts ?? true);
@@ -64,12 +130,9 @@ export const PrivacySettingsModal: React.FC = () => {
       mentorshipRequests: allowMentorship
     };
 
-    setCurrentUser({
-      ...currentUser,
-      privacy: updatedPrivacy,
-      notificationSettings: updatedNotifications,
-      isAvailableForMentorship: allowMentorship
-    });
+    updateUserPrivacy(updatedPrivacy);
+    updateNotificationSettings(updatedNotifications);
+    updateProfileBio(shortBio);
 
     showToast('Privacy & notification preferences saved successfully');
     setIsSettingsModalOpen(false);
@@ -83,7 +146,7 @@ export const PrivacySettingsModal: React.FC = () => {
           <div className="flex items-center gap-1.5">
             <span className="material-symbols-outlined text-blue-600 text-[18px]">lock</span>
             <h2 className="font-heading text-sm font-bold text-slate-900">
-              Privacy &amp; Ecosystem Settings
+              Privacy &amp; Notification Settings
             </h2>
           </div>
           <button
@@ -96,6 +159,53 @@ export const PrivacySettingsModal: React.FC = () => {
 
         {/* Form Body */}
         <form onSubmit={handleSave} className="p-5 space-y-3.5">
+          <div className="space-y-2 border-b border-slate-100 pb-3.5">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 font-mono">Profile Photos</p>
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" disabled={isUploadingProfileImage} onClick={() => avatarInputRef.current?.click()} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+                  <span className="material-symbols-outlined mr-1 align-middle text-[15px]">upload</span>Photo from device
+                </button>
+                <button type="button" disabled={isUploadingProfileImage} onClick={() => void openCamera('avatar')} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+                  <span className="material-symbols-outlined mr-1 align-middle text-[15px]">photo_camera</span>Take profile photo
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" disabled={isUploadingProfileImage} onClick={() => bannerInputRef.current?.click()} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+                  <span className="material-symbols-outlined mr-1 align-middle text-[15px]">upload</span>Banner from device
+                </button>
+                <button type="button" disabled={isUploadingProfileImage} onClick={() => void openCamera('banner')} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+                  <span className="material-symbols-outlined mr-1 align-middle text-[15px]">photo_camera</span>Take banner photo
+                </button>
+              </div>
+            </div>
+            <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={(event) => void handleImageSelected(event, 'avatar')} />
+            <input ref={bannerInputRef} type="file" accept="image/*" className="hidden" onChange={(event) => void handleImageSelected(event, 'banner')} />
+            <p className="text-[10px] text-slate-500">{isUploadingProfileImage ? 'Uploading image...' : 'Camera access depends on your browser and device permissions.'}</p>
+          </div>
+
+          {cameraType && (
+            <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <video ref={cameraVideoRef} autoPlay playsInline muted className="aspect-video w-full rounded-lg bg-slate-900 object-cover" />
+              <div className="flex gap-2">
+                <button type="button" onClick={captureCameraImage} className="flex-1 rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white hover:bg-blue-700">Take photo</button>
+                <button type="button" onClick={closeCamera} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100">Cancel</button>
+              </div>
+            </div>
+          )}
+          <div className="space-y-1.5 border-b border-slate-100 pb-3.5">
+            <label htmlFor="short-profile-bio" className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 font-mono">Short bio</label>
+            <textarea
+              id="short-profile-bio"
+              value={shortBio}
+              maxLength={280}
+              onChange={(event) => setShortBio(event.target.value)}
+              rows={3}
+              placeholder="Tell people what you work on or what you are interested in."
+              className="w-full resize-none rounded-lg border border-slate-200 px-2.5 py-2 text-xs text-slate-900 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+            />
+            <p className="text-right text-[10px] text-slate-400">{shortBio.length}/280</p>
+          </div>
           {/* Visibility Section */}
           <div className="space-y-2.5">
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 font-mono">Data &amp; Contact Visibility</p>

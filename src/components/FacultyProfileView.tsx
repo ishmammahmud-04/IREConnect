@@ -165,31 +165,7 @@ export const FacultyProfileView: React.FC<FacultyProfileViewProps> = ({ facultyU
               Currently advising 4 PhD candidates, 8 Masters researchers, and 12 Undergraduate thesis teams.
             </p>
 
-            <div className="flex items-center pt-2">
-              <div className="flex -space-x-2">
-                <img
-                  className="w-8 h-8 rounded-full border-2 border-white object-cover shadow-2xs"
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuB0nMIqwp8dEAIp1pfG9DjJgfIzhCHpLMM2NDqNuC_uUFJKnR4kUc-EOItJyCOJugS5UDIbhOmuUPAUX79ykTOwkvizL7A28qE0yQXJoqdQ9-IO1yBq_lsz-pc5MU2jEhTq_Y7KjyHSKdhfJUEZW_IuQ9YY7yrJBDbcEVGlBwVmABP8dx8-8FjgebJ3PcNKM8StMIgytp__tQv4YvHrOACsqYhhT6D0Pc5Aj9YQOFJkuZg1yXq1KggaPg"
-                  alt="Sarah Chen"
-                  title="Sarah Chen (Lead Systems)"
-                />
-                <img
-                  className="w-8 h-8 rounded-full border-2 border-white object-cover shadow-2xs"
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuCDFPXrS5u1ogF44Q_T_g2VNa4OWqAIIz5Ac5x3JLhHeYTZrUA1NO-bpT5a70ju-WjYzvEhWnKwQIvpAsOxyQqycK-Zi1vTalHYE-QT19_rHaJ8NEj5zqu0xORSmm7yVV9Qvl5XZjhY4ZDxfcWORkv-qvCc7Xxl51v0Ip73Anh8tImIBMnMiY6TzLe9a3agECw-LnOdoircpd3LLU9x_XJ3Cw-LSdmKheP-TA6u5ZBYkC4r6j1dX1WjZg"
-                  alt="Ahmed Rahman"
-                  title="Ahmed Rahman"
-                />
-                <img
-                  className="w-8 h-8 rounded-full border-2 border-white object-cover shadow-2xs"
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuDMRWUSpMcD-KgjKr7bRdIfjGk5t3KQneSAX12W6I7phnf9mU4oqy3Y3C6SmNTgqRVkNo2AdXNTJudZE6zkCDXB5z1z0-QzWKEZCTqAu-gJln787hTfjNmZBGkbupwm_y-x7IyGmvsuCQfpJiwntXajpAi_ndhwQFKlT_YMLcAe-IHF8osYoqdzeorKCa1_V1k3A9RedRhAHUwD8zRIupSvlDJT45aBUaMwLu4WfBEQw8TXfnTU0su7qQ"
-                  alt="David Kim"
-                  title="David Kim"
-                />
-                <div className="w-8 h-8 rounded-full border-2 border-white bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-700">
-                  +12
-                </div>
-              </div>
-            </div>
+            <p className="pt-2 text-xs text-slate-500">Student and mentee information will appear here when available.</p>
           </section>
         </div>
 

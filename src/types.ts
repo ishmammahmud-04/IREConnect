@@ -73,6 +73,9 @@ export interface User {
   role: UserRole;
   verificationStatus: VerificationState;
   avatar: string;
+  bannerUrl?: string;
+  avatarPath?: string;
+  bannerPath?: string;
   batch?: string;
   graduationYear?: number | string;
   studentId?: string;
@@ -229,6 +232,8 @@ export interface DepartmentEvent {
   category: string;
   participantsCount: number;
   attendeesAvatars: string[];
+  attendeesCount?: number;
+  isUserRsvped?: boolean;
 }
 
 export interface HallOfFameEntry {
@@ -302,4 +307,15 @@ export interface VerificationRequest {
   evidenceDocUrl?: string;
   scanMatchScore?: number;
   degreeProgram?: string;
+}
+
+export interface WorkflowItem {
+  id: string;
+  workflow_type: 'connection_request' | 'mentorship_request' | 'verification_request' | 'moderation_report';
+  requester_id: string;
+  recipient_id?: string | null;
+  status: string;
+  data: Record<string, unknown>;
+  created_at?: string;
+  updated_at?: string;
 }

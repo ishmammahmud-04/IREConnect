@@ -1,0 +1,128 @@
+import React, { useState } from 'react';
+import { supabase } from '../lib/supabase';
+import { UserRole } from '../types';
+
+type AuthMode = 'login' | 'register' | 'confirmation';
+
+export const AuthScreen: React.FC = () => {
+  const [mode, setMode] = useState<AuthMode>('login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [role, setRole] = useState<Extract<UserRole, 'student' | 'alumni' | 'faculty'>>('student');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const resetStatus = () => setError(null);
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError(null);
+    setIsSubmitting(true);
+
+    try {
+      if (mode === 'login') {
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+        if (signInError) throw signInError;
+        return;
+      }
+
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { full_name: name, role },
+          emailRedirectTo: window.location.origin
+        }
+      });
+      if (signUpError) throw signUpError;
+      if (!data.session) setMode('confirmation');
+    } catch (authError) {
+      setError(authError instanceof Error ? authError.message : 'Something went wrong. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const resendConfirmation = async () => {
+    setError(null);
+    setIsSubmitting(true);
+    const { error: resendError } = await supabase.auth.resend({ type: 'signup', email });
+    setIsSubmitting(false);
+    if (resendError) setError(resendError.message);
+  };
+
+  if (mode === 'confirmation') {
+    return (
+      <AuthLayout>
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+          <span className="material-symbols-outlined">mark_email_read</span>
+        </div>
+        <h1 className="mt-5 font-heading text-2xl font-bold text-slate-900">Verify your email</h1>
+        <p className="mt-2 text-sm leading-relaxed text-slate-600">
+          We sent a verification link to <strong>{email}</strong>. Open it to activate your IRE Network account.
+        </p>
+        {error && <p className="mt-4 rounded-lg bg-red-50 p-3 text-xs text-red-700">{error}</p>}
+        <button
+          type="button"
+          onClick={resendConfirmation}
+          disabled={isSubmitting}
+          className="mt-6 w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isSubmitting ? 'Sending…' : 'Resend verification email'}
+        </button>
+        <button type="button" onClick={() => setMode('login')} className="mt-3 w-full py-2 text-sm font-semibold text-slate-600 hover:text-slate-900">
+          Back to sign in
+        </button>
+      </AuthLayout>
+    );
+  }
+
+  const isRegister = mode === 'register';
+  return (
+    <AuthLayout>
+      <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-600">IRE Department Network</p>
+      <h1 className="mt-2 font-heading text-2xl font-bold text-slate-900">{isRegister ? 'Create your account' : 'Welcome back'}</h1>
+      <p className="mt-2 text-sm text-slate-600">{isRegister ? 'Create an account for the department community.' : 'Sign in to continue.'}</p>
+
+      <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
+        {isRegister && (
+          <>
+            <label className="block text-xs font-bold text-slate-700">Full name
+              <input required value={name} onChange={(event) => setName(event.target.value)} className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="Your full name" />
+            </label>
+            <label className="block text-xs font-bold text-slate-700">Account type
+              <select value={role} onChange={(event) => setRole(event.target.value as typeof role)} className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600">
+                <option value="student">Student</option>
+                <option value="alumni">Alumni</option>
+                <option value="faculty">Faculty</option>
+              </select>
+            </label>
+          </>
+        )}
+        <label className="block text-xs font-bold text-slate-700">University email
+          <input required type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="you@example.edu" />
+        </label>
+        <label className="block text-xs font-bold text-slate-700">Password
+          <input required minLength={6} type="password" autoComplete={isRegister ? 'new-password' : 'current-password'} value={password} onChange={(event) => setPassword(event.target.value)} className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="At least 6 characters" />
+        </label>
+        {error && <p className="rounded-lg bg-red-50 p-3 text-xs text-red-700">{error}</p>}
+        <button disabled={isSubmitting} className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60">
+          {isSubmitting ? 'Please wait…' : isRegister ? 'Create account' : 'Sign in'}
+        </button>
+      </form>
+      <p className="mt-5 text-center text-xs text-slate-600">
+        {isRegister ? 'Already have an account?' : 'New to IRE Network?'}{' '}
+        <button type="button" onClick={() => { resetStatus(); setMode(isRegister ? 'login' : 'register'); }} className="font-bold text-blue-600 hover:text-blue-700">
+          {isRegister ? 'Sign in' : 'Create an account'}
+        </button>
+      </p>
+    </AuthLayout>
+  );
+};
+
+const AuthLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <main className="flex min-h-screen items-center justify-center bg-slate-100 p-4">
+    <section className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-7 shadow-xl sm:p-8">{children}</section>
+  </main>
+);

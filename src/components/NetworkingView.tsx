@@ -51,45 +51,25 @@ export const NetworkingView: React.FC = () => {
       {/* Header */}
       <div>
         <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-bold uppercase tracking-widest border border-blue-200 mb-1.5">
-          Directory &amp; Advisory
+          People and Mentoring
         </div>
         <h1 className="font-heading text-[24px] md:text-[32px] font-extrabold text-slate-900 tracking-tight leading-tight">
-          Professional Network &amp; Mentorship
+          People and Mentoring
         </h1>
         <p className="text-xs md:text-sm text-slate-600 mt-0.5">
-          Build lasting connections across student cohorts, alumni at leading global labs, and faculty advisors.
+          Connect with students, alumni, and faculty members.
         </p>
       </div>
 
       {/* Main Navigation Tabs */}
       <div className="flex border-b border-slate-200 gap-1">
-        <button
-          onClick={() => setActiveTab('connections')}
-          className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all ${
-            activeTab === 'connections'
-              ? 'border-blue-600 text-blue-600'
-              : 'border-transparent text-slate-600 hover:text-slate-900'
-          }`}
-        >
+        <button onClick={() => setActiveTab('connections')} className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all ${activeTab === 'connections' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-600 hover:text-slate-900'}`}>
           Connections ({connectionList.length * 28})
         </button>
-
-        <button
-          onClick={() => setActiveTab('requests')}
-          className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all relative ${
-            activeTab === 'requests'
-              ? 'border-blue-600 text-blue-600'
-              : 'border-transparent text-slate-600 hover:text-slate-900'
-          }`}
-        >
+        <button onClick={() => setActiveTab('requests')} className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all relative ${activeTab === 'requests' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-600 hover:text-slate-900'}`}>
           Requests ({connectionRequests.length})
-          {connectionRequests.length > 0 && (
-            <span className="ml-1.5 px-1.5 py-0.2 rounded-full bg-rose-100 text-rose-700 text-[10px] font-mono font-bold">
-              {connectionRequests.length}
-            </span>
-          )}
+          {connectionRequests.length > 0 && <span className="ml-1.5 px-1.5 py-0.2 rounded-full bg-rose-100 text-rose-700 text-[10px] font-mono font-bold">{connectionRequests.length}</span>}
         </button>
-
         <button
           onClick={() => setActiveTab('mentorship')}
           className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 ${
@@ -280,30 +260,16 @@ export const NetworkingView: React.FC = () => {
               )}
             </div>
           ) : (
-            <div className="space-y-2.5">
-              <div className="bg-white rounded-xl p-3.5 border border-slate-200 shadow-2xs flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <img
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuBgOGZj8HWKLLzxuYNF87_mV90sB7EpQ2qveajHTqIiMBO54cvKdOyNYGxalRJh-785QcWWJsmGS16fZOtVy8SmyzrIKH5mvvMZMPWwEiL1s5CSbu2cwJ_D1FHfAyLEiohba15xIpx6rZpidAv2jbvVaX8Wp17gF4GLd5sbIAp6JQiSAAyIWeYBh5vfW1rk25cn0lFiYTm6in1m-Vu7acXo9fWYxiUUY0A1ybOUC6SxLU_XTu6VIeH3DA"
-                    alt="David Chen"
-                    className="w-10 h-10 rounded-lg object-cover border border-slate-200"
-                  />
-                  <div>
-                    <h4 className="font-bold text-xs text-slate-900">Dr. David Chen</h4>
-                    <p className="text-[11px] text-slate-500">Lead Researcher @ Quantum Computing</p>
-                  </div>
-                </div>
-                <span className="px-2.5 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-mono flex items-center gap-1 border border-slate-200">
-                  <span className="material-symbols-outlined text-[12px]">schedule</span>
-                  Pending Response
-                </span>
-              </div>
+            <div className="p-10 text-center bg-white rounded-2xl border border-slate-200 space-y-2">
+              <span className="material-symbols-outlined text-[36px] text-slate-400">outbox</span>
+              <h3 className="font-heading text-sm font-bold text-slate-900">No sent requests</h3>
+              <p className="text-xs text-slate-500">Your outgoing connection requests will appear here.</p>
             </div>
           )}
         </div>
       )}
 
-      {/* Tab 3: Mentorship Discovery Hub */}
+          {/* Tab 3: Mentoring */}
       {activeTab === 'mentorship' && (
         <div className="space-y-4">
           {/* Availability Switch Banner */}

@@ -26,13 +26,13 @@ export const OpportunitiesBoard: React.FC = () => {
       !q ||
       opp.title.toLowerCase().includes(q) ||
       opp.organization.toLowerCase().includes(q) ||
-      opp.skillsRequired.some((s) => s.toLowerCase().includes(q));
+      opp.requiredSkills.some((skill) => skill.toLowerCase().includes(q));
 
     if (!matchesSearch) return false;
 
     if (skillMatchOnly) {
-      const hasMatch = opp.skillsRequired.some((s) =>
-        currentUser.skills.some((userSkill) => userSkill.toLowerCase() === s.toLowerCase())
+      const hasMatch = opp.requiredSkills.some((skill) =>
+        currentUser.skills.some((userSkill) => userSkill.toLowerCase() === skill.toLowerCase())
       );
       if (!hasMatch) return false;
     }
@@ -46,13 +46,13 @@ export const OpportunitiesBoard: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-bold uppercase tracking-widest border border-blue-200 mb-1.5">
-            Career &amp; Research Portal
+            Careers and Research
           </div>
           <h1 className="font-heading text-[24px] md:text-[32px] font-extrabold text-slate-900 tracking-tight leading-tight">
             Opportunities Board
           </h1>
           <p className="text-xs md:text-sm text-slate-600 mt-0.5">
-            Exclusive internships, lab research assistantships, industrial full-time roles, and hackathon challenges.
+            Find internships, research positions, jobs, and student opportunities.
           </p>
         </div>
 
@@ -114,9 +114,9 @@ export const OpportunitiesBoard: React.FC = () => {
         {filteredOpps.map((opp) => {
           const isSaved = isItemSaved(opp.id);
           const userSkills = currentUser.skills || [];
-          const requiredSkills = opp.skillsRequired || [];
-          const matchedSkills = requiredSkills.filter((s) =>
-            userSkills.some((userSkill) => userSkill.toLowerCase() === s.toLowerCase())
+          const requiredSkills = opp.requiredSkills || [];
+          const matchedSkills = requiredSkills.filter((skill) =>
+            userSkills.some((userSkill) => userSkill.toLowerCase() === skill.toLowerCase())
           );
 
           return (
@@ -164,7 +164,7 @@ export const OpportunitiesBoard: React.FC = () => {
                   </p>
 
                   <div className="flex flex-wrap gap-1 pt-1.5">
-                    {(opp.skillsRequired || []).map((skill) => {
+                    {requiredSkills.map((skill) => {
                       const isMatch = matchedSkills.includes(skill);
                       return (
                         <span

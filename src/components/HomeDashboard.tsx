@@ -15,7 +15,8 @@ export const HomeDashboard: React.FC = () => {
     setSelectedArticle,
     articles,
     sendConnectionRequest,
-    setIsCreateModalOpen
+    setIsCreateModalOpen,
+    networkStats
   } = useApp();
 
   const otherUsers = users.filter((u) => u.id !== currentUser.id);
@@ -29,13 +30,13 @@ export const HomeDashboard: React.FC = () => {
           <div className="space-y-1.5 max-w-xl">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/15 text-blue-300 text-[10px] font-bold tracking-widest uppercase border border-blue-500/30">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
-              Department Network OS v1.0
+              IRE Department Network
             </div>
             <h1 className="font-heading text-[22px] md:text-[28px] font-bold text-white tracking-tight leading-tight">
               Welcome back, {currentUser.name.split(' ')[0]}!
             </h1>
             <p className="text-xs md:text-sm text-slate-300 leading-relaxed">
-              Explore active robotics projects, peer-reviewed publications, global alumni placements, and departmental opportunities.
+              Keep up with department projects, publications, opportunities, and announcements.
             </p>
           </div>
 
@@ -57,37 +58,25 @@ export const HomeDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Quick Department High Density Stats Strip */}
+        {/* Department statistics */}
         <div className="grid grid-cols-3 gap-3 md:gap-4 mt-5 pt-4 border-t border-slate-800">
           <div>
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Cohorts &amp; Students</span>
-              <span className="text-[10px] font-mono text-emerald-400 font-bold">+12%</span>
             </div>
-            <span className="text-[18px] md:text-[22px] font-bold text-white block mt-0.5">1,240+</span>
-            <div className="mt-1.5 h-1 w-full rounded-full bg-slate-800 overflow-hidden">
-              <div className="h-full bg-blue-500 rounded-full w-[78%]"></div>
-            </div>
+            <span className="text-[18px] md:text-[22px] font-bold text-white block mt-0.5">{networkStats.students}+</span>
           </div>
           <div className="border-l border-slate-800 pl-3 md:pl-4">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Global Alumni</span>
-              <span className="text-[10px] font-mono text-blue-400 font-bold">54 Orgs</span>
             </div>
-            <span className="text-[18px] md:text-[22px] font-bold text-white block mt-0.5">3,500+</span>
-            <div className="mt-1.5 h-1 w-full rounded-full bg-slate-800 overflow-hidden">
-              <div className="h-full bg-indigo-500 rounded-full w-[88%]"></div>
-            </div>
+            <span className="text-[18px] md:text-[22px] font-bold text-white block mt-0.5">{networkStats.alumni}+</span>
           </div>
           <div className="border-l border-slate-800 pl-3 md:pl-4">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Active Projects</span>
-              <span className="text-[10px] font-mono text-amber-400 font-bold">28 IEEE</span>
             </div>
-            <span className="text-[18px] md:text-[22px] font-bold text-white block mt-0.5">450+</span>
-            <div className="mt-1.5 h-1 w-full rounded-full bg-slate-800 overflow-hidden">
-              <div className="h-full bg-emerald-500 rounded-full w-[65%]"></div>
-            </div>
+            <span className="text-[18px] md:text-[22px] font-bold text-white block mt-0.5">{networkStats.projects}</span>
           </div>
         </div>
       </section>

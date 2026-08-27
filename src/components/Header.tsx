@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useApp, MainTab } from '../context/AppContext';
 import { UserRole } from '../types';
+import { supabase } from '../lib/supabase';
 
 export const Header: React.FC = () => {
   const {
     currentUser,
-    switchRole,
     currentTab,
     setCurrentTab,
     notifications,
@@ -13,8 +13,6 @@ export const Header: React.FC = () => {
     setIsSettingsModalOpen,
     setIsCreateModalOpen,
     setIsSavedModalOpen,
-    setIsAuthModalOpen,
-    setAuthModalMode,
     globalSearchQuery,
     setGlobalSearchQuery
   } = useApp();
@@ -41,12 +39,9 @@ export const Header: React.FC = () => {
                 <span className="font-heading text-[16px] md:text-[17px] font-bold text-slate-900 tracking-tight">
                   IRE Network
                 </span>
-                <span className="hidden lg:inline-flex px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 text-[10px] font-bold uppercase tracking-widest border border-blue-200">
-                  v1.0
-                </span>
               </div>
               <p className="text-[10px] text-slate-500 hidden md:block leading-none">
-                IoT &amp; Robotics Engineering Dept.
+                IoT &amp; Robotics Engineering
               </p>
             </div>
           </button>
@@ -138,17 +133,19 @@ export const Header: React.FC = () => {
             <span className="material-symbols-outlined text-[16px]">account_balance</span>
             Department
           </button>
-          <button
-            onClick={() => setCurrentTab('admin')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
-              currentTab === 'admin'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[16px]">admin_panel_settings</span>
-            Admin
-          </button>
+          {currentUser.role === 'admin' && (
+            <button
+              onClick={() => setCurrentTab('admin')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                currentTab === 'admin'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">admin_panel_settings</span>
+              Admin
+            </button>
+          )}
         </nav>
 
         {/* Right Actions Cluster */}
@@ -225,58 +222,6 @@ export const Header: React.FC = () => {
                   </span>
                 </div>
 
-                <div className="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                  Switch User View / Demo Role
-                </div>
-                <button
-                  onClick={() => switchRole('student')}
-                  className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between hover:bg-slate-100 transition-colors ${
-                    currentUser.role === 'student' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-700'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[16px]">school</span>
-                    <span>Student (Sarah Chen)</span>
-                  </div>
-                  {currentUser.role === 'student' && <span className="text-[10px] font-bold uppercase">Active</span>}
-                </button>
-                <button
-                  onClick={() => switchRole('alumni')}
-                  className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between hover:bg-slate-100 transition-colors ${
-                    currentUser.role === 'alumni' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-700'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[16px]">work</span>
-                    <span>Alumni (James Miller)</span>
-                  </div>
-                  {currentUser.role === 'alumni' && <span className="text-[10px] font-bold uppercase">Active</span>}
-                </button>
-                <button
-                  onClick={() => switchRole('faculty')}
-                  className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between hover:bg-slate-100 transition-colors ${
-                    currentUser.role === 'faculty' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-700'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[16px]">local_library</span>
-                    <span>Faculty (Dr. Elena Rossi)</span>
-                  </div>
-                  {currentUser.role === 'faculty' && <span className="text-[10px] font-bold uppercase">Active</span>}
-                </button>
-                <button
-                  onClick={() => switchRole('admin')}
-                  className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between hover:bg-slate-100 transition-colors ${
-                    currentUser.role === 'admin' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-700'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[16px]">admin_panel_settings</span>
-                    <span>Admin Central</span>
-                  </div>
-                  {currentUser.role === 'admin' && <span className="text-[10px] font-bold uppercase">Active</span>}
-                </button>
-
                 <div className="border-t border-slate-100 mt-2 pt-1.5">
                   <button
                     onClick={() => setCurrentTab('profile')}
@@ -293,14 +238,11 @@ export const Header: React.FC = () => {
                     <span>Settings &amp; Privacy</span>
                   </button>
                   <button
-                    onClick={() => {
-                      setAuthModalMode('login');
-                      setIsAuthModalOpen(true);
-                    }}
+                    onClick={() => supabase.auth.signOut()}
                     className="w-full text-left px-2.5 py-1.5 rounded-lg flex items-center gap-2 text-red-600 hover:bg-red-50"
                   >
                     <span className="material-symbols-outlined text-[16px]">logout</span>
-                    <span>Log In / Sign Up Screen</span>
+                    <span>Sign out</span>
                   </button>
                 </div>
               </div>

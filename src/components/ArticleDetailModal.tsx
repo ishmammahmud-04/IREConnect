@@ -117,7 +117,7 @@ export const ArticleDetailModal: React.FC = () => {
             <blockquote className="my-4 pl-3.5 border-l-2 border-blue-600 py-2 bg-blue-50/50 rounded-r-lg italic text-xs text-slate-800 font-medium">
               "The real challenge was not assembling the hardware; it was tuning the PID controllers to ensure the rover moved exactly as the navigation stack intended."
               <footer className="text-[10px] text-slate-500 font-normal not-italic mt-1">
-                — Sarah Chen, Systems Lead
+                   — IRE Network contributor
               </footer>
             </blockquote>
 
