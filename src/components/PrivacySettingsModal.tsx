@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { VisibilityLevel, PrivacySettings, NotificationSettings } from '../types';
+import { Education, Experience, ExternalLinks, VisibilityLevel, PrivacySettings, NotificationSettings } from '../types';
 
 export const PrivacySettingsModal: React.FC = () => {
   const {
@@ -10,6 +10,7 @@ export const PrivacySettingsModal: React.FC = () => {
     updateUserPrivacy,
     updateNotificationSettings,
     updateProfileBio,
+    updateProfileDetails,
     showToast,
     updateProfileImage,
     isUploadingProfileImage
@@ -21,6 +22,14 @@ export const PrivacySettingsModal: React.FC = () => {
   const [projectsVis, setProjectsVis] = useState<VisibilityLevel>('public');
   const [experienceVis, setExperienceVis] = useState<VisibilityLevel>('public');
   const [shortBio, setShortBio] = useState('');
+  const [headline, setHeadline] = useState('');
+  const [skillsText, setSkillsText] = useState('');
+  const [educationText, setEducationText] = useState('');
+  const [experienceText, setExperienceText] = useState('');
+  const [linkedin, setLinkedin] = useState('');
+  const [github, setGithub] = useState('');
+  const [googleScholar, setGoogleScholar] = useState('');
+  const [orcid, setOrcid] = useState('');
   
   const [allowMentorship, setAllowMentorship] = useState<boolean>(true);
   const [notifAnnouncements, setNotifAnnouncements] = useState<boolean>(true);
@@ -96,6 +105,14 @@ export const PrivacySettingsModal: React.FC = () => {
       setProjectsVis(currentUser.privacy?.projects || 'public');
       setExperienceVis(currentUser.privacy?.experience || 'public');
       setShortBio(currentUser.bio || '');
+      setHeadline(currentUser.headline || '');
+      setSkillsText((currentUser.skills || []).join(', '));
+      setEducationText((currentUser.education || []).map((item) => [item.institution, item.degree, item.field, item.startYear, item.endYear].join(' | ')).join('\n'));
+      setExperienceText((currentUser.experience || []).map((item) => [item.position, item.organization, item.startDate, item.endDate, item.description].join(' | ')).join('\n'));
+      setLinkedin(currentUser.externalLinks?.linkedin || '');
+      setGithub(currentUser.externalLinks?.github || '');
+      setGoogleScholar(currentUser.externalLinks?.googleScholar || '');
+      setOrcid(currentUser.externalLinks?.orcid || '');
       setAllowMentorship(currentUser.isAvailableForMentorship ?? true);
       setNotifAnnouncements(currentUser.notificationSettings?.announcements ?? true);
       setNotifOpportunityAlerts(currentUser.notificationSettings?.opportunityAlerts ?? true);
@@ -133,6 +150,10 @@ export const PrivacySettingsModal: React.FC = () => {
     updateUserPrivacy(updatedPrivacy);
     updateNotificationSettings(updatedNotifications);
     updateProfileBio(shortBio);
+    const education: Education[] = educationText.split('\n').map((line, index) => line.split('|').map((part) => part.trim())).filter((parts) => parts.length >= 5 && parts[0]).map(([institution, degree, field, startYear, endYear], index) => ({ id: currentUser.education[index]?.id || `education-${Date.now()}-${index}`, institution, degree, field, startYear: Number(startYear) || new Date().getFullYear(), endYear: Number(endYear) || 'Present' }));
+    const experience: Experience[] = experienceText.split('\n').map((line, index) => line.split('|').map((part) => part.trim())).filter((parts) => parts.length >= 5 && parts[0]).map(([position, organization, startDate, endDate, description], index) => ({ id: currentUser.experience[index]?.id || `experience-${Date.now()}-${index}`, position, organization, startDate, endDate, description }));
+    const externalLinks: ExternalLinks = { linkedin: linkedin.trim(), github: github.trim(), googleScholar: googleScholar.trim(), orcid: orcid.trim() };
+    updateProfileDetails({ headline, skills: skillsText.split(',').map((skill) => skill.trim()).filter(Boolean), education, experience, externalLinks });
 
     showToast('Privacy & notification preferences saved successfully');
     setIsSettingsModalOpen(false);
@@ -205,6 +226,20 @@ export const PrivacySettingsModal: React.FC = () => {
               className="w-full resize-none rounded-lg border border-slate-200 px-2.5 py-2 text-xs text-slate-900 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
             />
             <p className="text-right text-[10px] text-slate-400">{shortBio.length}/280</p>
+          </div>
+          <div className="space-y-2 border-b border-slate-100 pb-3.5">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 font-mono">Profile details</p>
+            <input value={headline} onChange={(event) => setHeadline(event.target.value)} maxLength={120} placeholder="Headline, for example: Robotics researcher" className="w-full rounded-lg border border-slate-200 px-2.5 py-2 text-xs outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" />
+            <input value={skillsText} onChange={(event) => setSkillsText(event.target.value)} placeholder="Skills, separated by commas" className="w-full rounded-lg border border-slate-200 px-2.5 py-2 text-xs outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" />
+            <textarea value={educationText} onChange={(event) => setEducationText(event.target.value)} rows={3} placeholder="Education: institution | degree | field | start year | end year" className="w-full resize-none rounded-lg border border-slate-200 px-2.5 py-2 text-xs outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" />
+            <textarea value={experienceText} onChange={(event) => setExperienceText(event.target.value)} rows={3} placeholder="Experience: position | organization | start date | end date | description" className="w-full resize-none rounded-lg border border-slate-200 px-2.5 py-2 text-xs outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" />
+            <div className="grid grid-cols-2 gap-2">
+              <input value={linkedin} onChange={(event) => setLinkedin(event.target.value)} placeholder="LinkedIn URL" className="rounded-lg border border-slate-200 px-2.5 py-2 text-xs outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" />
+              <input value={github} onChange={(event) => setGithub(event.target.value)} placeholder="GitHub URL" className="rounded-lg border border-slate-200 px-2.5 py-2 text-xs outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" />
+              <input value={googleScholar} onChange={(event) => setGoogleScholar(event.target.value)} placeholder="Google Scholar URL" className="rounded-lg border border-slate-200 px-2.5 py-2 text-xs outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" />
+              <input value={orcid} onChange={(event) => setOrcid(event.target.value)} placeholder="ORCID iD" className="rounded-lg border border-slate-200 px-2.5 py-2 text-xs outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" />
+            </div>
+            <p className="text-[10px] text-slate-500">Use one education or experience entry per line. Separate each part with |.</p>
           </div>
           {/* Visibility Section */}
           <div className="space-y-2.5">

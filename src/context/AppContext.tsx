@@ -79,6 +79,7 @@ interface AppContextType {
   updateUserPrivacy: (settings: User['privacy']) => void;
   updateNotificationSettings: (settings: User['notificationSettings']) => void;
   updateProfileBio: (bio: string) => void;
+  updateProfileDetails: (details: { headline: string; skills: string[]; education: User['education']; experience: User['experience']; externalLinks: User['externalLinks'] }) => void;
   markNotificationsAsRead: () => void;
   hydrateNotifications: (notifications: AppNotification[]) => void;
   hydratePersistedAccount: (data: { user: User; notifications: AppNotification[]; savedItemIds: string[] }) => void;
@@ -462,6 +463,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     void supabase.from('profiles').update({ bio: trimmedBio, updated_at: new Date().toISOString() }).eq('user_id', currentUser.id);
   };
 
+  const updateProfileDetails = (details: { headline: string; skills: string[]; education: User['education']; experience: User['experience']; externalLinks: User['externalLinks'] }) => {
+    setCurrentUser((previous) => ({ ...previous, ...details }));
+    void supabase.from('profiles').update({
+      headline: details.headline.trim(),
+      skills: details.skills,
+      education: details.education,
+      experience: details.experience,
+      external_links: details.externalLinks,
+      updated_at: new Date().toISOString()
+    }).eq('user_id', currentUser.id);
+  };
+
   const updateProfileImage = async (file: File, type: 'avatar' | 'banner') => {
     if (!currentUser.id || !file.type.startsWith('image/')) {
       showToast('Please choose an image file.');
@@ -595,6 +608,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateUserPrivacy,
         updateNotificationSettings,
         updateProfileBio,
+        updateProfileDetails,
         markNotificationsAsRead,
         hydrateNotifications,
         hydrateWorkflows,
