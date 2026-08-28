@@ -217,6 +217,7 @@ export const PeopleDirectory: React.FC = () => {
         {(filteredUsers || []).map((person) => (
           <div
             key={person.id}
+            onClick={() => setSelectedUserForProfile(person)}
             className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs hover:shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between"
           >
             <div>
@@ -285,7 +286,7 @@ export const PeopleDirectory: React.FC = () => {
             {/* Bottom Actions */}
             <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center gap-2">
               <button
-                onClick={() => setSelectedUserForProfile(person)}
+                onClick={(event) => { event.stopPropagation(); setSelectedUserForProfile(person); }}
                 className="flex-1 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors"
               >
                 View Profile
@@ -293,14 +294,14 @@ export const PeopleDirectory: React.FC = () => {
 
               {person.isAvailableForMentorship ? (
                 <button
-                  onClick={() => openMentorshipRequest(person)}
+                  onClick={(event) => { event.stopPropagation(); openMentorshipRequest(person); }}
                   className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition-colors shadow-2xs"
                 >
                   Request Mentor
                 </button>
               ) : (
                 <button
-                  onClick={() => sendConnectionRequest(person.id)}
+                  onClick={(event) => { event.stopPropagation(); sendConnectionRequest(person.id); }}
                   className="px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-colors shadow-2xs"
                 >
                   Connect

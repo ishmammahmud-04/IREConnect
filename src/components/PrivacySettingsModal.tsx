@@ -161,9 +161,9 @@ export const PrivacySettingsModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex justify-center items-center p-4 overflow-y-auto animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-md rounded-xl border border-slate-200 shadow-2xl overflow-hidden my-4 relative animate-in zoom-in-95 duration-200">
+      <div className="bg-white w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-xl border border-slate-200 shadow-2xl my-4 relative animate-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="px-5 py-3 border-b border-slate-200 flex items-center justify-between">
+        <div className="sticky top-0 z-10 px-5 py-3 border-b border-slate-200 bg-white flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <span className="material-symbols-outlined text-blue-600 text-[18px]">lock</span>
             <h2 className="font-heading text-sm font-bold text-slate-900">

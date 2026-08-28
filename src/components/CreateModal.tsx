@@ -22,6 +22,7 @@ export const CreateModal: React.FC = () => {
   const [desc, setDesc] = useState('');
   const [tags, setTags] = useState('ROS2, Python, Computer Vision');
   const [secondaryField, setSecondaryField] = useState('');
+  const [publicationUrl, setPublicationUrl] = useState('');
 
   if (!isCreateModalOpen) return null;
 
@@ -73,7 +74,8 @@ export const CreateModal: React.FC = () => {
         abstract: desc,
         keywords: tagArray.length ? tagArray : ['Robotics', 'Autonomy'],
         date: 'May 2026',
-        coverImage: ''
+            coverImage: '',
+            externalUrl: publicationUrl.trim() || undefined,
       });
     } else if (contentType === 'achievement') {
       createAchievement({
@@ -127,9 +129,9 @@ export const CreateModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex justify-center items-center p-4 overflow-y-auto animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-xl rounded-xl border border-slate-200 shadow-2xl overflow-hidden my-4 relative animate-in zoom-in-95 duration-200">
+      <div className="bg-white w-full max-w-xl max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-xl border border-slate-200 shadow-2xl my-4 relative animate-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="px-5 py-3 border-b border-slate-200 flex items-center justify-between">
+        <div className="sticky top-0 z-10 px-5 py-3 border-b border-slate-200 bg-white flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <span className="material-symbols-outlined text-blue-600 text-[18px]">add_circle</span>
             <h2 className="font-heading text-sm font-bold text-slate-900">Publish New Content</h2>
@@ -209,6 +211,19 @@ export const CreateModal: React.FC = () => {
               />
             </div>
           </div>
+
+          {contentType === 'publication' && (
+            <div>
+              <label className="block text-xs font-bold text-slate-800 mb-1">Published paper link</label>
+              <input
+                type="url"
+                value={publicationUrl}
+                onChange={(e) => setPublicationUrl(e.target.value)}
+                placeholder="https://orcid.org/... or https://researchgate.net/..."
+                className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600"
+              />
+            </div>
+          )}
 
           <div>
             <label className="block text-xs font-bold text-slate-800 mb-1">Technologies / Skills (Comma-separated)</label>

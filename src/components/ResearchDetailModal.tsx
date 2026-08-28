@@ -109,6 +109,12 @@ export const ResearchDetailModal: React.FC = () => {
 
           {/* Actions Button Strip */}
           <div className="pt-3 border-t border-slate-100 flex flex-wrap gap-2">
+            {selectedPublication.externalUrl && (
+              <a href={selectedPublication.externalUrl} target="_blank" rel="noreferrer" className="px-4 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition-all flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[15px]">open_in_new</span>
+                Open publication link
+              </a>
+            )}
             <button
               onClick={() => showToast('Opening IEEE publication full text reader...')}
               className="px-4 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-all flex items-center gap-1.5 shadow-2xs"
