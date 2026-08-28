@@ -258,6 +258,8 @@ const toAppUser = (user: Session['user']): User => {
     role,
     verificationStatus: role === 'alumni' ? 'Verified Alumni' : role === 'faculty' ? 'Verified Faculty' : 'Verified Student',
     avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=2563eb&color=fff`,
+    batch: typeof user.user_metadata.batch === 'string' ? user.user_metadata.batch : undefined,
+    studentId: typeof user.user_metadata.student_id === 'string' ? user.user_metadata.student_id : undefined,
     department: 'IoT & Robotics Engineering',
     headline: role === 'faculty' ? 'Faculty member' : role === 'alumni' ? 'IRE Alumni' : 'IRE Student',
     bio: '',
