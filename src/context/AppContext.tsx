@@ -183,8 +183,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     [workflowItems, users, currentUser.id]
   );
   const networkStats = useMemo(() => ({
-    students: 330 + users.filter((user) => user.role === 'student').length,
-    alumni: 65 + users.filter((user) => user.role === 'alumni').length,
+    students: 330 + users.filter((user) => user.role === 'student' && isCountedStudent(user)).length,
+    alumni: users.filter((user) => user.role === 'alumni').length,
     projects: projects.length
   }), [projects.length, users]);
   const getConnectionCount = (userId: string) => workflowItems.filter(
@@ -632,6 +632,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       {children}
     </AppContext.Provider>
   );
+};
+
+const isCountedStudent = (user: User): boolean => {
+  const values = [user.batch, user.graduationYear].filter((value): value is string | number => value !== undefined && value !== null);
+  return values.some((value) => {
+    const text = String(value);
+    const batchMatch = text.match(/batch\s*(\d+)/i);
+    const numericBatch = /^\s*\d{1,2}\s*$/.test(text) ? Number(text) : null;
+    const yearMatch = text.match(/\b(20\d{2})\b/);
+    return Boolean(
+      (batchMatch && Number(batchMatch[1]) >= 9) ||
+      (numericBatch !== null && numericBatch >= 9) ||
+      (yearMatch && Number(yearMatch[1]) >= 2031)
+    );
+  });
 };
 
 const workflowToConnectionRequests = (items: WorkflowItem[], users: User[], currentUserId: string): ConnectionRequest[] => items
