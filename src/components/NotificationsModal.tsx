@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { AppNotification } from '../types';
 import { useApp } from '../context/AppContext';
 
@@ -21,11 +21,17 @@ export const NotificationsModal: React.FC = () => {
     setCurrentTab
   } = useApp();
 
+  const unreadCount = notifications.filter((notification) => !notification.isRead).length;
+  useEffect(() => {
+    if (isNotificationsModalOpen && unreadCount > 0) {
+      void markNotificationsAsRead();
+    }
+  }, [isNotificationsModalOpen]);
+
   if (!isNotificationsModalOpen) return null;
 
-  const unreadCount = notifications.filter((notification) => !notification.isRead).length;
   const openNotification = (notification: AppNotification) => {
-    if (!notification.isRead) markNotificationAsRead(notification.id);
+    if (!notification.isRead) void markNotificationAsRead(notification.id);
     if (notification.destination) setCurrentTab(notification.destination);
     setIsNotificationsModalOpen(false);
   };
