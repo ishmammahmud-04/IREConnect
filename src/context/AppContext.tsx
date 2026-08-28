@@ -40,6 +40,7 @@ interface AppContextType {
   savedItemIds: Set<string>;
   networkStats: { students: number; alumni: number; projects: number };
   getConnectionCount: (userId: string) => number;
+  getConnectionUsers: (status: 'connected' | 'pending', direction?: 'incoming' | 'outgoing') => User[];
   updateProfileImage: (file: File, type: 'avatar' | 'banner') => Promise<void>;
   isUploadingProfileImage: boolean;
   
@@ -195,6 +196,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ((item.requester_id === currentUser.id && item.recipient_id === userId) || (item.requester_id === userId && item.recipient_id === currentUser.id)));
     if (!workflow) return 'none';
     return workflow.status === 'accepted' ? 'connected' : workflow.status === 'pending' ? 'pending' : 'none';
+  };
+  const getConnectionUsers = (status: 'connected' | 'pending', direction?: 'incoming' | 'outgoing') => {
+    const ids = new Set(workflowItems
+      .filter((item) => item.workflow_type === 'connection_request' && item.status === (status === 'connected' ? 'accepted' : 'pending'))
+      .filter((item) => !direction || (direction === 'incoming' ? item.recipient_id === currentUser.id : item.requester_id === currentUser.id))
+      .map((item) => item.requester_id === currentUser.id ? item.recipient_id : item.requester_id)
+      .filter((id): id is string => Boolean(id)));
+    return users.filter((user) => ids.has(user.id));
   };
 
   const showToast = (msg: string) => {
@@ -552,6 +561,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         savedItemIds,
         networkStats,
         getConnectionCount,
+        getConnectionUsers,
         getConnectionStatus,
         updateProfileImage,
         isUploadingProfileImage,

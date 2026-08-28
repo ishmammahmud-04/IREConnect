@@ -14,7 +14,8 @@ export const NetworkingView: React.FC = () => {
     openMentorshipRequest,
     showToast,
     getConnectionCount,
-    getConnectionStatus
+    getConnectionStatus,
+    getConnectionUsers
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'connections' | 'requests' | 'mentorship'>('connections');
@@ -46,7 +47,9 @@ export const NetworkingView: React.FC = () => {
     );
   });
 
-  const connectionList = users.filter((u) => u.id !== currentUser.id);
+  const connectionList = getConnectionUsers('connected');
+  const pendingOutgoing = getConnectionUsers('pending', 'outgoing');
+  const suggestedPeople = users.filter((u) => u.id !== currentUser.id && getConnectionStatus(u.id) === 'none');
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto animate-in fade-in duration-300 pb-16">
@@ -94,7 +97,7 @@ export const NetworkingView: React.FC = () => {
               People You May Know
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-              {(connectionList || []).slice(0, 3).map((person) => (
+              {(suggestedPeople || []).slice(0, 3).map((person) => (
                 <div
                   key={person.id}
                   className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs flex flex-col items-center text-center justify-between hover:shadow-xs transition-all"
@@ -210,7 +213,7 @@ export const NetworkingView: React.FC = () => {
                   : 'border-transparent text-slate-500 hover:text-slate-900'
               }`}
             >
-              Sent (1)
+              Sent ({pendingOutgoing.length})
             </button>
           </div>
 
@@ -263,10 +266,25 @@ export const NetworkingView: React.FC = () => {
               )}
             </div>
           ) : (
-            <div className="p-10 text-center bg-white rounded-2xl border border-slate-200 space-y-2">
-              <span className="material-symbols-outlined text-[36px] text-slate-400">outbox</span>
-              <h3 className="font-heading text-sm font-bold text-slate-900">No sent requests</h3>
-              <p className="text-xs text-slate-500">Your outgoing connection requests will appear here.</p>
+            <div className="space-y-2.5">
+              {pendingOutgoing.length > 0 ? pendingOutgoing.map((person) => (
+                <div key={person.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
+                  <button type="button" onClick={() => setSelectedUserForProfile(person)} className="flex min-w-0 items-center gap-3 text-left">
+                    <img src={person.avatar} alt={person.name} className="h-12 w-12 shrink-0 rounded-lg border border-slate-200 object-cover" />
+                    <span className="min-w-0">
+                      <strong className="block truncate text-xs text-slate-900">{person.name}</strong>
+                      <span className="block truncate text-xs text-slate-500">{person.headline}</span>
+                    </span>
+                  </button>
+                  <span className="shrink-0 rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-500">Pending</span>
+                </div>
+              )) : (
+                <div className="space-y-2 rounded-2xl border border-slate-200 bg-white p-10 text-center">
+                  <span className="material-symbols-outlined text-[36px] text-slate-400">outbox</span>
+                  <h3 className="font-heading text-sm font-bold text-slate-900">No sent requests</h3>
+                  <p className="text-xs text-slate-500">Your outgoing connection requests will appear here.</p>
+                </div>
+              )}
             </div>
           )}
         </div>
