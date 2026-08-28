@@ -36,10 +36,6 @@ interface AppContextType {
   events: DepartmentEvent[];
   notifications: AppNotification[];
   connectionRequests: ConnectionRequest[];
-  verificationRequests: VerificationRequest[];
-  adminVerificationQueue?: VerificationRequest[];
-  moderationReports: ModerationReport[];
-  flaggedItems?: ModerationReport[];
   linkedInImports: LinkedInImportItem[];
   savedItemIds: Set<string>;
   networkStats: { students: number; alumni: number; projects: number };
@@ -68,10 +64,7 @@ interface AppContextType {
   addAnnouncement: (announcement: Partial<Announcement> & { title: string; description: string }) => void;
   publishAnnouncement?: (announcement: Partial<Announcement> & { title: string; description: string }) => void;
   submitReport: (contentTitle: string, reason: string, details: string) => void;
-  approveVerification: (requestId: string) => void;
-  rejectVerification: (requestId: string) => void;
-  resolveModerationReport: (reportId: string, action: 'approve' | 'remove') => void;
-  resolveFlaggedItem?: (itemId: string, action: 'dismiss' | 'remove') => void;
+  getConnectionStatus: (userId: string) => 'connected' | 'pending' | 'none';
   applyLinkedInData: (data: { headline?: string; skills?: string[]; experience?: any[]; education?: any[] }) => void;
   syncLinkedInSelected: (selectedIds: string[]) => void;
   syncLinkedInAll: () => void;
@@ -188,14 +181,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     () => workflowToConnectionRequests(workflowItems, users, currentUser.id),
     [workflowItems, users, currentUser.id]
   );
-  const verificationRequests = useMemo(
-    () => workflowToVerificationRequests(workflowItems, users),
-    [workflowItems, users]
-  );
-  const moderationReports = useMemo(
-    () => workflowToModerationReports(workflowItems),
-    [workflowItems]
-  );
   const networkStats = useMemo(() => ({
     students: 330 + users.filter((user) => user.role === 'student').length,
     alumni: 65 + users.filter((user) => user.role === 'alumni').length,
@@ -204,6 +189,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const getConnectionCount = (userId: string) => workflowItems.filter(
     (item) => item.workflow_type === 'connection_request' && item.status === 'accepted' && (item.requester_id === userId || item.recipient_id === userId)
   ).length;
+  const getConnectionStatus = (userId: string): 'connected' | 'pending' | 'none' => {
+    const workflow = workflowItems.find((item) => item.workflow_type === 'connection_request' &&
+      ((item.requester_id === currentUser.id && item.recipient_id === userId) || (item.requester_id === userId && item.recipient_id === currentUser.id)));
+    if (!workflow) return 'none';
+    return workflow.status === 'accepted' ? 'connected' : workflow.status === 'pending' ? 'pending' : 'none';
+  };
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -413,22 +404,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIsReportModalOpen(false);
   };
 
-  const approveVerification = (requestId: string) => {
-    void invokeAdminAction({ action: 'verify_user', workflowId: requestId }, 'User identity verified and official badge issued.', 'Verification failed.');
-  };
-
-  const rejectVerification = (requestId: string) => {
-    void invokeAdminAction({ action: 'reject_verification', workflowId: requestId }, 'Verification rejected.', 'Verification rejection failed.');
-  };
-
-  const resolveModerationReport = (reportId: string, action: 'approve' | 'remove') => {
-    void invokeAdminAction(
-      { action: action === 'remove' ? 'remove_content' : 'dismiss_report', workflowId: reportId },
-      action === 'approve' ? 'Content approved/reinstated' : 'Content removed per safety rules',
-      'Moderation action failed.'
-    );
-  };
-
   const toggleLinkedInSelect = (id: string) => {
     setLinkedInImports((prev) =>
       prev.map((item) => (item.id === id ? { ...item, selected: !item.selected } : item))
@@ -567,14 +542,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         events,
         notifications,
         connectionRequests,
-        verificationRequests,
-        adminVerificationQueue: verificationRequests,
-        moderationReports,
-        flaggedItems: moderationReports,
         linkedInImports,
         savedItemIds,
         networkStats,
         getConnectionCount,
+        getConnectionStatus,
         updateProfileImage,
         isUploadingProfileImage,
         globalSearchQuery,
@@ -595,12 +567,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addAnnouncement,
         publishAnnouncement,
         submitReport,
-        approveVerification,
-        rejectVerification,
-        resolveModerationReport,
-        resolveFlaggedItem: (itemId: string, action: 'dismiss' | 'remove') => {
-          resolveModerationReport(itemId, action === 'remove' ? 'remove' : 'approve');
-        },
         applyLinkedInData,
         syncLinkedInSelected,
         syncLinkedInAll,

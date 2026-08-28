@@ -13,7 +13,8 @@ export const NetworkingView: React.FC = () => {
     setSelectedUserForProfile,
     openMentorshipRequest,
     showToast,
-    getConnectionCount
+    getConnectionCount,
+    getConnectionStatus
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'connections' | 'requests' | 'mentorship'>('connections');
@@ -118,11 +119,12 @@ export const NetworkingView: React.FC = () => {
                   </div>
 
                   <button
-                    onClick={() => sendConnectionRequest(person.id)}
-                    className="mt-3.5 w-full py-1.5 rounded-lg border border-slate-300 text-slate-800 text-xs font-bold hover:bg-slate-50 transition-colors flex items-center justify-center gap-1"
+                    onClick={() => { if (getConnectionStatus(person.id) === 'none') sendConnectionRequest(person.id); }}
+                    disabled={getConnectionStatus(person.id) !== 'none'}
+                    className={`mt-3.5 w-full py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1 ${getConnectionStatus(person.id) === 'connected' ? 'bg-emerald-100 text-emerald-700' : getConnectionStatus(person.id) === 'pending' ? 'bg-slate-100 text-slate-500' : 'border border-slate-300 text-slate-800 hover:bg-slate-50'}`}
                   >
                     <span className="material-symbols-outlined text-[15px]">person_add</span>
-                    <span>Connect</span>
+                    <span>{getConnectionStatus(person.id) === 'connected' ? 'Connected' : getConnectionStatus(person.id) === 'pending' ? 'Pending' : 'Connect'}</span>
                   </button>
                 </div>
               ))}

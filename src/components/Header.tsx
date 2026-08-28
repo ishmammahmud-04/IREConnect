@@ -133,19 +133,6 @@ export const Header: React.FC = () => {
             <span className="material-symbols-outlined text-[16px]">account_balance</span>
             Department
           </button>
-          {currentUser.role === 'admin' && (
-            <button
-              onClick={() => setCurrentTab('admin')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                currentTab === 'admin'
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[16px]">admin_panel_settings</span>
-              Admin
-            </button>
-          )}
         </nav>
 
         {/* Right Actions Cluster */}
@@ -217,9 +204,6 @@ export const Header: React.FC = () => {
                 <div className="p-2.5 border-b border-slate-100 mb-1.5 bg-slate-50 rounded-lg">
                   <p className="font-bold text-slate-900">{currentUser.name}</p>
                   <p className="text-[11px] text-slate-500 truncate">{currentUser.email}</p>
-                  <span className="inline-block mt-1 px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 text-[9px] font-bold uppercase tracking-wider">
-                    {currentUser.verificationStatus}
-                  </span>
                 </div>
 
                 <div className="border-t border-slate-100 mt-2 pt-1.5">

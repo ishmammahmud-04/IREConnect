@@ -25,10 +25,6 @@ export const Sidebar: React.FC = () => {
         <div className="min-w-0">
           <p className="font-bold text-[12px] text-white truncate leading-tight">{currentUser.name}</p>
           <p className="text-[10px] text-slate-400 truncate capitalize">{currentUser.role.replace('_', ' ')}</p>
-          <span className="inline-flex items-center gap-1 text-[9px] text-blue-400 font-bold uppercase tracking-wider mt-0.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
-            {currentUser.verificationStatus.replace('Verified ', '')}
-          </span>
         </div>
       </div>
 
@@ -87,19 +83,6 @@ export const Sidebar: React.FC = () => {
           <span>Saved Bookmarks</span>
         </button>
 
-        {currentUser.role === 'admin' && (
-          <button
-            onClick={() => setCurrentTab('admin')}
-            className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs transition-colors text-left ${
-              currentTab === 'admin'
-                ? 'bg-blue-600 text-white font-bold shadow-xs'
-                : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[16px] text-indigo-400">admin_panel_settings</span>
-            <span>Administration</span>
-          </button>
-        )}
       </div>
 
       {/* Department Summary Footer */}

@@ -17,6 +17,7 @@ export const HomeDashboard: React.FC = () => {
     sendConnectionRequest,
     setIsCreateModalOpen,
     networkStats
+    , getConnectionStatus
   } = useApp();
 
   const otherUsers = users.filter((u) => u.id !== currentUser.id);
@@ -326,10 +327,11 @@ export const HomeDashboard: React.FC = () => {
 
               <div className="mt-2.5 pt-2 flex gap-1.5">
                 <button
-                  onClick={() => sendConnectionRequest(user.id)}
-                  className="flex-1 py-1 rounded-lg bg-slate-900 text-white text-[11px] font-bold hover:bg-slate-800 transition-colors"
+                  onClick={() => { if (getConnectionStatus(user.id) === 'none') sendConnectionRequest(user.id); }}
+                  disabled={getConnectionStatus(user.id) !== 'none'}
+                  className={`flex-1 py-1 rounded-lg text-[11px] font-bold transition-colors ${getConnectionStatus(user.id) === 'connected' ? 'bg-emerald-100 text-emerald-700' : getConnectionStatus(user.id) === 'pending' ? 'bg-slate-100 text-slate-500' : 'bg-slate-900 text-white hover:bg-slate-800'}`}
                 >
-                  Connect
+                  {getConnectionStatus(user.id) === 'connected' ? 'Connected' : getConnectionStatus(user.id) === 'pending' ? 'Pending' : 'Connect'}
                 </button>
                 <button
                   onClick={() => setSelectedUserForProfile(user)}

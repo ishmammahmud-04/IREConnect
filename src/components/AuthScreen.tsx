@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { UserRole } from '../types';
 
 type AuthMode = 'login' | 'register' | 'confirmation';
 
@@ -9,7 +8,6 @@ export const AuthScreen: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [role, setRole] = useState<Extract<UserRole, 'student' | 'alumni' | 'faculty'>>('student');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,6 +19,7 @@ export const AuthScreen: React.FC = () => {
     setIsSubmitting(true);
 
     try {
+      if (!isUftbEmail(email)) throw new Error('Only UFTB email addresses can access this network.');
       if (mode === 'login') {
         const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
         if (signInError) throw signInError;
@@ -31,7 +30,7 @@ export const AuthScreen: React.FC = () => {
         email,
         password,
         options: {
-          data: { full_name: name, role },
+          data: { full_name: name },
           emailRedirectTo: window.location.origin
         }
       });
@@ -91,17 +90,10 @@ export const AuthScreen: React.FC = () => {
             <label className="block text-xs font-bold text-slate-700">Full name
               <input required value={name} onChange={(event) => setName(event.target.value)} className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="Your full name" />
             </label>
-            <label className="block text-xs font-bold text-slate-700">Account type
-              <select value={role} onChange={(event) => setRole(event.target.value as typeof role)} className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600">
-                <option value="student">Student</option>
-                <option value="alumni">Alumni</option>
-                <option value="faculty">Faculty</option>
-              </select>
-            </label>
           </>
         )}
         <label className="block text-xs font-bold text-slate-700">University email
-          <input required type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="you@example.edu" />
+          <input required type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="your.name@uftb.ac.bd" />
         </label>
         <label className="block text-xs font-bold text-slate-700">Password
           <input required minLength={6} type="password" autoComplete={isRegister ? 'new-password' : 'current-password'} value={password} onChange={(event) => setPassword(event.target.value)} className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="At least 6 characters" />
@@ -126,3 +118,5 @@ const AuthLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <section className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-7 shadow-xl sm:p-8">{children}</section>
   </main>
 );
+
+const isUftbEmail = (email: string) => /^[^\s@]+@uftb\.[a-z]{2,}(?:\.[a-z]{2,})?$/i.test(email.trim());

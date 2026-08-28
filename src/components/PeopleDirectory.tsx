@@ -7,6 +7,7 @@ export const PeopleDirectory: React.FC = () => {
     setSelectedUserForProfile,
     sendConnectionRequest,
     openMentorshipRequest
+    , getConnectionStatus
   } = useApp();
 
   const [activeSegment, setActiveSegment] = useState<'students' | 'alumni' | 'faculty'>('students');
@@ -301,10 +302,11 @@ export const PeopleDirectory: React.FC = () => {
                 </button>
               ) : (
                 <button
-                  onClick={(event) => { event.stopPropagation(); sendConnectionRequest(person.id); }}
-                  className="px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-colors shadow-2xs"
+                  onClick={(event) => { event.stopPropagation(); if (getConnectionStatus(person.id) === 'none') sendConnectionRequest(person.id); }}
+                  disabled={getConnectionStatus(person.id) !== 'none'}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-2xs ${getConnectionStatus(person.id) === 'connected' ? 'bg-emerald-100 text-emerald-700' : getConnectionStatus(person.id) === 'pending' ? 'bg-slate-100 text-slate-500' : 'bg-slate-900 text-white hover:bg-slate-800'}`}
                 >
-                  Connect
+                  {getConnectionStatus(person.id) === 'connected' ? 'Connected' : getConnectionStatus(person.id) === 'pending' ? 'Pending' : 'Connect'}
                 </button>
               )}
             </div>

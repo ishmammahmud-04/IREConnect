@@ -11,7 +11,6 @@ import { NetworkingView } from './components/NetworkingView';
 import { OpportunitiesBoard } from './components/OpportunitiesBoard';
 import { DepartmentHub } from './components/DepartmentHub';
 import { ProfileView } from './components/ProfileView';
-import { AdminControlSuite } from './components/AdminControlSuite';
 
 // Modals
 import { ArticleDetailModal } from './components/ArticleDetailModal';
@@ -60,8 +59,6 @@ const MainContent: React.FC = () => {
         return <DepartmentHub />;
       case 'profile':
         return <ProfileView />;
-      case 'admin':
-        return currentUser.role === 'admin' ? <AdminControlSuite /> : <HomeDashboard />;
       default:
         return <HomeDashboard />;
     }
@@ -190,7 +187,7 @@ const profileRowToUser = (profile: Record<string, unknown>, fallback: User): Use
   ...fallback,
   name: typeof profile.full_name === 'string' ? profile.full_name : fallback.name,
   role: profile.role === 'admin' || profile.role === 'alumni' || profile.role === 'faculty' ? profile.role : 'student',
-  verificationStatus: profile.verification_status === 'Verified Student' || profile.verification_status === 'Verified Alumni' || profile.verification_status === 'Verified Faculty' || profile.verification_status === 'Rejected' ? profile.verification_status : 'Pending Verification',
+  verificationStatus: profile.role === 'alumni' ? 'Verified Alumni' : profile.role === 'faculty' ? 'Verified Faculty' : 'Verified Student',
   avatar: typeof profile.avatar_url === 'string' && profile.avatar_url ? profile.avatar_url : fallback.avatar,
   bannerUrl: typeof profile.banner_url === 'string' && profile.banner_url ? profile.banner_url : fallback.bannerUrl,
   avatarPath: typeof profile.avatar_path === 'string' ? profile.avatar_path : fallback.avatarPath,
@@ -210,7 +207,7 @@ const profileRowToUser = (profile: Record<string, unknown>, fallback: User): Use
 const profileRowToDirectoryUser = (profile: Record<string, unknown>): User => {
   const name = typeof profile.full_name === 'string' ? profile.full_name : 'IRE Member';
   return profileRowToUser(profile, {
-    id: String(profile.user_id), name, email: '', role: 'student', verificationStatus: 'Pending Verification',
+    id: String(profile.user_id), name, email: '', role: 'student', verificationStatus: 'Verified Student',
     avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=2563eb&color=fff`, department: 'IoT & Robotics Engineering', headline: '', bio: '', location: '', skills: [], education: [], experience: [], externalLinks: {},
     privacy: { cv: 'department', email: 'private', phone: 'private', experience: 'public', projects: 'public', achievements: 'public', publications: 'public', externalLinks: 'public' },
     notificationSettings: { connectionRequests: true, acceptedConnections: true, opportunityAlerts: true, deadlineReminders: true, announcements: true, events: true, contentInteractions: true, mentorshipRequests: true }
@@ -250,7 +247,7 @@ const toAppUser = (user: Session['user']): User => {
     name,
     email: user.email || '',
     role,
-    verificationStatus: 'Pending Verification',
+    verificationStatus: role === 'alumni' ? 'Verified Alumni' : role === 'faculty' ? 'Verified Faculty' : 'Verified Student',
     avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=2563eb&color=fff`,
     department: 'IoT & Robotics Engineering',
     headline: role === 'faculty' ? 'Faculty member' : role === 'alumni' ? 'IRE Alumni' : 'IRE Student',
