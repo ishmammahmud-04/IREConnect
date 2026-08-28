@@ -32,6 +32,10 @@ import { AppNotification, User } from './types';
 const MainContent: React.FC = () => {
   const { currentTab, selectedUserForProfile, setSelectedUserForProfile, toastMessage, currentUser } = useApp();
 
+  useEffect(() => {
+    setSelectedUserForProfile(null);
+  }, [currentTab, setSelectedUserForProfile]);
+
   const renderActiveScreen = () => {
     // If a user profile is selected from any screen, show that user's profile
     if (selectedUserForProfile) {

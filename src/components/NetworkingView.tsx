@@ -12,7 +12,8 @@ export const NetworkingView: React.FC = () => {
     sendConnectionRequest,
     setSelectedUserForProfile,
     openMentorshipRequest,
-    showToast
+    showToast,
+    getConnectionCount
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'connections' | 'requests' | 'mentorship'>('connections');
@@ -64,7 +65,7 @@ export const NetworkingView: React.FC = () => {
       {/* Main Navigation Tabs */}
       <div className="flex border-b border-slate-200 gap-1">
         <button onClick={() => setActiveTab('connections')} className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all ${activeTab === 'connections' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-600 hover:text-slate-900'}`}>
-          Connections ({connectionList.length * 28})
+          Connections ({getConnectionCount(currentUser.id)})
         </button>
         <button onClick={() => setActiveTab('requests')} className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all relative ${activeTab === 'requests' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-600 hover:text-slate-900'}`}>
           Requests ({connectionRequests.length})
