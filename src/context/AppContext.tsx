@@ -74,6 +74,7 @@ interface AppContextType {
   updateProfileBio: (bio: string) => void;
   updateProfileDetails: (details: { headline: string; skills: string[]; education: User['education']; experience: User['experience']; externalLinks: User['externalLinks'] }) => void;
   markNotificationsAsRead: () => void;
+  markNotificationAsRead: (notificationId: string) => void;
   hydrateNotifications: (notifications: AppNotification[]) => void;
   hydratePersistedAccount: (data: { user: User; notifications: AppNotification[]; savedItemIds: string[] }) => void;
   hydratePersistedContent: (data: { projects: Project[]; achievements: Achievement[]; publications: Publication[]; articles: Article[]; opportunities: Opportunity[]; announcements: Announcement[] }) => void;
@@ -493,6 +494,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('All notifications marked as read');
   };
 
+  const markNotificationAsRead = (notificationId: string) => {
+    setNotifications((prev) => prev.map((notification) => notification.id === notificationId ? { ...notification, isRead: true } : notification));
+    void supabase.from('notifications').update({ is_read: true }).eq('id', notificationId).eq('user_id', currentUser.id);
+  };
+
   const hydratePersistedAccount = ({ user, notifications: persistedNotifications, savedItemIds: persistedSavedItemIds }: { user: User; notifications: AppNotification[]; savedItemIds: string[] }) => {
     setCurrentUser(user);
     setNotifications(persistedNotifications);
@@ -576,6 +582,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateProfileBio,
         updateProfileDetails,
         markNotificationsAsRead,
+        markNotificationAsRead,
         hydrateNotifications,
         hydrateWorkflows,
         hydratePersistedAccount,

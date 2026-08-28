@@ -16,12 +16,19 @@ export const NotificationsModal: React.FC = () => {
     isNotificationsModalOpen,
     setIsNotificationsModalOpen,
     notifications,
-    markNotificationsAsRead
+    markNotificationsAsRead,
+    markNotificationAsRead,
+    setCurrentTab
   } = useApp();
 
   if (!isNotificationsModalOpen) return null;
 
   const unreadCount = notifications.filter((notification) => !notification.isRead).length;
+  const openNotification = (notification: AppNotification) => {
+    if (!notification.isRead) markNotificationAsRead(notification.id);
+    if (notification.destination) setCurrentTab(notification.destination);
+    setIsNotificationsModalOpen(false);
+  };
 
   return (
     <div
@@ -72,9 +79,11 @@ export const NotificationsModal: React.FC = () => {
             </div>
           ) : (
             notifications.map((notification) => (
-              <article
+              <button
                 key={notification.id}
-                className={`flex gap-3 px-5 py-3.5 ${notification.isRead ? 'bg-white' : 'bg-blue-50/60'}`}
+                type="button"
+                onClick={() => openNotification(notification)}
+                className={`flex w-full gap-3 px-5 py-3.5 text-left transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 ${notification.isRead ? 'bg-white' : 'bg-blue-50/60'}`}
               >
                 {notification.avatar ? (
                   <img
@@ -95,7 +104,7 @@ export const NotificationsModal: React.FC = () => {
                   <p className="mt-0.5 text-[11px] leading-relaxed text-slate-600">{notification.message}</p>
                   <time className="mt-1 block text-[10px] font-medium text-slate-400">{notification.time}</time>
                 </div>
-              </article>
+              </button>
             ))
           )}
         </div>

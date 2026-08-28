@@ -222,6 +222,13 @@ const notificationRowToAppNotification = (notification: Record<string, unknown>)
   isToday: notification.created_at ? new Date(String(notification.created_at)).toDateString() === new Date().toDateString() : true,
   isRead: Boolean(notification.is_read),
   type: notification.notification_type === 'connection' || notification.notification_type === 'mentorship' || notification.notification_type === 'opportunity' || notification.notification_type === 'announcement' || notification.notification_type === 'event' ? notification.notification_type : 'verification',
+  destination: notification.notification_type === 'connection' || notification.notification_type === 'mentorship'
+    ? 'network'
+    : notification.notification_type === 'opportunity'
+      ? 'opportunities'
+      : notification.notification_type === 'announcement' || notification.notification_type === 'event'
+        ? 'department'
+        : 'profile',
   avatar: typeof notification.avatar_url === 'string' ? notification.avatar_url : undefined
 });
 
