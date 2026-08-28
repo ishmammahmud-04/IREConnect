@@ -8,6 +8,9 @@ export const AuthScreen: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [role, setRole] = useState<'student' | 'alumni' | 'faculty'>('student');
+  const [batch, setBatch] = useState('');
+  const [studentId, setStudentId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,7 +33,7 @@ export const AuthScreen: React.FC = () => {
         email,
         password,
         options: {
-          data: { full_name: name },
+          data: { full_name: name, role, batch: batch.trim(), student_id: studentId.trim() },
           emailRedirectTo: window.location.origin
         }
       });
@@ -89,6 +92,19 @@ export const AuthScreen: React.FC = () => {
           <>
             <label className="block text-xs font-bold text-slate-700">Full name
               <input required value={name} onChange={(event) => setName(event.target.value)} className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="Your full name" />
+            </label>
+            <label className="block text-xs font-bold text-slate-700">Account type
+              <select value={role} onChange={(event) => setRole(event.target.value as typeof role)} className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600">
+                <option value="student">Student</option>
+                <option value="alumni">Alumni</option>
+                <option value="faculty">Faculty</option>
+              </select>
+            </label>
+            <label className="block text-xs font-bold text-slate-700">Batch or graduation year
+              <input required={role === 'student'} value={batch} onChange={(event) => setBatch(event.target.value)} className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder={role === 'faculty' ? 'Optional' : 'e.g. 2026 or Batch 10'} />
+            </label>
+            <label className="block text-xs font-bold text-slate-700">{role === 'faculty' ? 'Employee ID' : 'Student ID'}
+              <input required value={studentId} onChange={(event) => setStudentId(event.target.value)} className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder={role === 'faculty' ? 'Your employee ID' : 'Your university ID'} />
             </label>
           </>
         )}

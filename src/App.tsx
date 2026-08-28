@@ -192,6 +192,8 @@ const profileRowToUser = (profile: Record<string, unknown>, fallback: User): Use
   bannerUrl: typeof profile.banner_url === 'string' && profile.banner_url ? profile.banner_url : fallback.bannerUrl,
   avatarPath: typeof profile.avatar_path === 'string' ? profile.avatar_path : fallback.avatarPath,
   bannerPath: typeof profile.banner_path === 'string' ? profile.banner_path : fallback.bannerPath,
+  batch: typeof profile.batch === 'string' ? profile.batch : fallback.batch,
+  studentId: typeof profile.student_id === 'string' ? profile.student_id : fallback.studentId,
   department: typeof profile.department === 'string' ? profile.department : fallback.department,
   headline: typeof profile.headline === 'string' ? profile.headline : fallback.headline,
   bio: typeof profile.bio === 'string' ? profile.bio : fallback.bio,
