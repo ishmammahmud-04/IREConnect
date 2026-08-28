@@ -22,7 +22,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
     sendConnectionRequest,
     showToast,
     getConnectionCount
-    , getConnectionStatus
+    , getConnectionStatus,
+    openChat
   } = useApp();
 
   const user = userOverride || currentUser;
@@ -129,6 +130,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
                   <span className="material-symbols-outlined text-[15px]">person_add</span>
                   <span>{getConnectionStatus(user.id) === 'connected' ? 'Connected' : getConnectionStatus(user.id) === 'pending' ? 'Pending' : 'Connect'}</span>
                 </button>
+                {getConnectionStatus(user.id) === 'connected' && (
+                  <button
+                    onClick={() => openChat(user)}
+                    className="px-4 py-1.5 rounded-lg border border-slate-300 text-slate-800 text-xs font-bold hover:bg-slate-50 transition-colors flex items-center gap-1.5"
+                  >
+                    <span className="material-symbols-outlined text-[15px]">mail</span>
+                    <span>Message</span>
+                  </button>
+                )}
                 {user.isAvailableForMentorship && (
                   <button
                     onClick={() => openMentorshipRequest(user)}

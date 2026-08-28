@@ -10,6 +10,7 @@ export const Header: React.FC = () => {
     setCurrentTab,
     notifications,
     setIsNotificationsModalOpen,
+    setIsChatModalOpen,
     setIsSettingsModalOpen,
     setIsCreateModalOpen,
     setIsSavedModalOpen,
@@ -157,6 +158,15 @@ export const Header: React.FC = () => {
           </button>
 
           {/* Notifications */}
+          <button
+            onClick={() => setIsChatModalOpen(true)}
+            aria-label="Messages"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+            title="Messages"
+          >
+            <span className="material-symbols-outlined text-[18px]">mail</span>
+          </button>
+
           <button
             onClick={() => setIsNotificationsModalOpen(true)}
             aria-label="Notifications"

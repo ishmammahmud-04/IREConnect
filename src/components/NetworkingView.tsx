@@ -15,7 +15,8 @@ export const NetworkingView: React.FC = () => {
     showToast,
     getConnectionCount,
     getConnectionStatus,
-    getConnectionUsers
+    getConnectionUsers,
+    openChat
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'connections' | 'requests' | 'mentorship'>('connections');
@@ -170,7 +171,7 @@ export const NetworkingView: React.FC = () => {
 
                   <div className="flex items-center gap-1.5 shrink-0">
                     <button
-                      onClick={() => showToast(`Opening chat with ${person.name}...`)}
+                      onClick={() => openChat(person)}
                       className="px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-colors"
                     >
                       Message

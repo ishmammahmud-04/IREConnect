@@ -278,6 +278,17 @@ export interface AppNotification {
   avatar?: string;
 }
 
+export interface ChatMessage {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  body: string;
+  attachmentUrl?: string;
+  attachmentName?: string;
+  attachmentType?: string;
+  createdAt: string;
+}
+
 export interface ConnectionRequest {
   id: string;
   user: User;

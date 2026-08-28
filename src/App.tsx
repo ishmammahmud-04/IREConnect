@@ -24,6 +24,7 @@ import { MentorshipModal } from './components/MentorshipModal';
 import { PrivacySettingsModal } from './components/PrivacySettingsModal';
 import { SavedBookmarksModal } from './components/SavedBookmarksModal';
 import { NotificationsModal } from './components/NotificationsModal';
+import { ChatModal } from './components/ChatModal';
 import { AuthScreen } from './components/AuthScreen';
 import { supabase } from './lib/supabase';
 import { AppNotification, User } from './types';
@@ -95,6 +96,7 @@ const MainContent: React.FC = () => {
       <PrivacySettingsModal />
       <SavedBookmarksModal />
       <NotificationsModal />
+      <ChatModal />
 
       {/* Global Action Toast Notification */}
       {toastMessage && (

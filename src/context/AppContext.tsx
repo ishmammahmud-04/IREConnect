@@ -109,6 +109,10 @@ interface AppContextType {
   setIsSettingsModalOpen: (open: boolean) => void;
   isNotificationsModalOpen: boolean;
   setIsNotificationsModalOpen: (open: boolean) => void;
+  isChatModalOpen: boolean;
+  setIsChatModalOpen: (open: boolean) => void;
+  chatTargetUser: User | null;
+  openChat: (user: User) => void;
   isSavedModalOpen: boolean;
   setIsSavedModalOpen: (open: boolean) => void;
   isReportModalOpen: boolean;
@@ -178,6 +182,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isUploadingProfileImage, setIsUploadingProfileImage] = useState(false);
+  const [isChatModalOpen, setIsChatModalOpen] = useState(false);
+  const [chatTargetUser, setChatTargetUser] = useState<User | null>(null);
 
   const connectionRequests = useMemo(
     () => workflowToConnectionRequests(workflowItems, users, currentUser.id),
@@ -547,6 +553,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setMentorTargetUser(user);
     setIsMentorshipModalOpen(true);
   };
+  const openChat = (user: User) => {
+    if (getConnectionStatus(user.id) !== 'connected') {
+      showToast('You can message accepted connections only.');
+      return;
+    }
+    setChatTargetUser(user);
+    setIsChatModalOpen(true);
+  };
 
   return (
     <AppContext.Provider
@@ -630,6 +644,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsSettingsModalOpen,
         isNotificationsModalOpen,
         setIsNotificationsModalOpen,
+        isChatModalOpen,
+        setIsChatModalOpen,
+        chatTargetUser,
+        openChat,
         isSavedModalOpen,
         setIsSavedModalOpen,
         isReportModalOpen,
