@@ -106,6 +106,7 @@ export interface User {
 
 export interface Project {
   id: string;
+  ownerId?: string;
   title: string;
   coverImage: string;
   category: 'Robotics' | 'AI' | 'IoT' | 'Embedded Systems' | 'Assistive Tech' | 'Computer Vision' | 'Autonomous Systems';
@@ -131,6 +132,7 @@ export type PublicationStatus = 'Published' | 'Accepted' | 'Under Review' | 'Pre
 
 export interface Publication {
   id: string;
+  ownerId?: string;
   title: string;
   authors: string[];
   publicationType: 'Research Paper' | 'Journal' | 'Conference Proceedings' | 'Book Chapter' | 'Thesis';
@@ -154,6 +156,7 @@ export interface Publication {
 
 export interface Achievement {
   id: string;
+  ownerId?: string;
   title: string;
   category: 'Award' | 'Competition' | 'Certification' | 'Hackathon' | 'Patent' | 'Scholarship' | 'Professional Milestone';
   organization: string;
@@ -175,6 +178,7 @@ export interface Achievement {
 
 export interface Article {
   id: string;
+  ownerId?: string;
   title: string;
   subtitle: string;
   coverImage: string;
@@ -191,6 +195,7 @@ export interface Article {
 
 export interface Opportunity {
   id: string;
+  ownerId?: string;
   title: string;
   organization: string;
   organizationLogo?: string;
@@ -208,6 +213,7 @@ export interface Opportunity {
 
 export interface Announcement {
   id: string;
+  ownerId?: string;
   title: string;
   description: string;
   date: string;

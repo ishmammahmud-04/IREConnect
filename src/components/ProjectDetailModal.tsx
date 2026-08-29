@@ -9,16 +9,37 @@ export const ProjectDetailModal: React.FC = () => {
     users,
     toggleSaveItem,
     isItemSaved,
-    showToast
+    showToast,
+    currentUser,
+    deletePublishedContent,
+    setCreateModalEditingItem,
+    setIsCreateModalOpen
   } = useApp();
 
   if (!selectedProject) return null;
 
   const isSaved = isItemSaved(selectedProject.id);
+  const canManage = selectedProject.ownerId === currentUser.id;
 
-  const handleShare = () => {
-    navigator.clipboard?.writeText(window.location.href);
-    showToast('Project link copied to clipboard!');
+  const handleShare = async () => {
+    const shareText = `${selectedProject.title} — ${selectedProject.demoUrl || selectedProject.githubUrl || window.location.href}`;
+    try {
+      await navigator.clipboard.writeText(shareText);
+      showToast('Project link copied to clipboard!');
+    } catch {
+      showToast('Share text ready to copy: ' + shareText);
+    }
+  };
+
+  const handleDelete = async () => {
+    const ok = await deletePublishedContent('project', selectedProject.id);
+    if (ok) setSelectedProject(null);
+  };
+
+  const handleEdit = () => {
+    setCreateModalEditingItem({ type: 'project', item: selectedProject });
+    setIsCreateModalOpen(true);
+    setSelectedProject(null);
   };
 
   return (
@@ -51,6 +72,24 @@ export const ProjectDetailModal: React.FC = () => {
             >
               <span className="material-symbols-outlined text-[18px]">share</span>
             </button>
+            {canManage && (
+              <>
+                <button
+                  onClick={handleEdit}
+                  className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors"
+                  title="Edit project"
+                >
+                  <span className="material-symbols-outlined text-[18px]">edit</span>
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 transition-colors"
+                  title="Delete project"
+                >
+                  <span className="material-symbols-outlined text-[18px]">delete</span>
+                </button>
+              </>
+            )}
             <button
               onClick={() => setSelectedProject(null)}
               className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors"

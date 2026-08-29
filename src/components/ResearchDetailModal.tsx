@@ -7,24 +7,50 @@ export const ResearchDetailModal: React.FC = () => {
     setSelectedPublication,
     toggleSaveItem,
     isItemSaved,
-    showToast
+    showToast,
+    currentUser,
+    deletePublishedContent,
+    setCreateModalEditingItem,
+    setIsCreateModalOpen
   } = useApp();
 
   if (!selectedPublication) return null;
 
   const isSaved = isItemSaved(selectedPublication.id);
+ const canManage = selectedPublication.ownerId === currentUser.id || selectedPublication.authors?.includes(currentUser.name);
 
-  const copyBibtex = () => {
-    const bib = `@article{${selectedPublication.authors[0].split(' ')[1].toLowerCase()}2026edge,
-  title={${selectedPublication.title}},
-  author={${selectedPublication.authors.join(' and ')}},
-  journal={${selectedPublication.journal}},
-  year={2026},
-  doi={${selectedPublication.doi}}
+ const handleShare = async () => {
+   const shareText = `${selectedPublication.title} — ${selectedPublication.externalUrl || window.location.href}`;
+   try {
+     await navigator.clipboard.writeText(shareText);
+     showToast('Publication link copied to clipboard!');
+   } catch {
+     showToast('Share text ready to copy: ' + shareText);
+   }
+ };
+
+ const copyBibtex = () => {
+   const bib = `@article{${selectedPublication.authors[0].split(' ')[1].toLowerCase()}2026edge,
+ title={${selectedPublication.title}},
+ author={${selectedPublication.authors.join(' and ')}},
+ journal={${selectedPublication.journal}},
+ year={2026},
+ doi={${selectedPublication.doi}}
 }`;
-    navigator.clipboard?.writeText(bib);
-    showToast('BibTeX citation copied to clipboard!');
-  };
+   navigator.clipboard?.writeText(bib);
+   showToast('BibTeX citation copied to clipboard!');
+ };
+
+ const handleDelete = async () => {
+   const ok = await deletePublishedContent('publication', selectedPublication.id);
+   if (ok) setSelectedPublication(null);
+ };
+
+ const handleEdit = () => {
+   setCreateModalEditingItem({ type: 'publication', item: selectedPublication });
+   setIsCreateModalOpen(true);
+   setSelectedPublication(null);
+ };
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex justify-center items-start overflow-y-auto p-2 sm:p-4 md:p-6 animate-in fade-in duration-200">
@@ -132,12 +158,39 @@ export const ResearchDetailModal: React.FC = () => {
             </button>
 
             <button
+              onClick={handleShare}
+              className="px-3.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-xs font-medium hover:bg-slate-50 transition-all flex items-center gap-1.5"
+            >
+              <span className="material-symbols-outlined text-[16px]">share</span>
+              <span>Share</span>
+            </button>
+
+            <button
               onClick={copyBibtex}
               className="px-3.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-xs font-medium hover:bg-slate-50 transition-all flex items-center gap-1.5"
             >
               <span className="material-symbols-outlined text-[16px]">format_quote</span>
               <span>Copy BibTeX</span>
             </button>
+
+            {canManage && (
+              <>
+                <button
+                  onClick={handleEdit}
+                  className="px-3.5 py-1.5 rounded-lg border border-slate-200 text-slate-700 text-xs font-medium hover:bg-slate-50 transition-all flex items-center gap-1.5"
+                >
+                  <span className="material-symbols-outlined text-[16px]">edit</span>
+                  <span>Edit</span>
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="px-3.5 py-1.5 rounded-lg border border-red-200 text-red-600 text-xs font-medium hover:bg-red-50 transition-all flex items-center gap-1.5"
+                >
+                  <span className="material-symbols-outlined text-[16px]">delete</span>
+                  <span>Delete</span>
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>

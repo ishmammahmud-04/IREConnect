@@ -70,6 +70,8 @@ interface AppContextType {
   addOpportunity: (opportunity: Opportunity) => void;
   createAnnouncement: (announcement: Partial<Announcement> & { title: string; description: string }) => void;
   addAnnouncement: (announcement: Partial<Announcement> & { title: string; description: string }) => void;
+  deletePublishedContent: (contentType: 'project' | 'publication' | 'achievement' | 'article' | 'opportunity' | 'announcement', id: string) => Promise<boolean>;
+  updatePublishedContent: (contentType: 'project' | 'publication' | 'achievement' | 'article' | 'opportunity' | 'announcement', item: any) => Promise<boolean>;
   publishAnnouncement?: (announcement: Partial<Announcement> & { title: string; description: string }) => void;
   submitReport: (contentTitle: string, reason: string, details: string) => void;
   getConnectionStatus: (userId: string) => 'connected' | 'pending' | 'none';
@@ -108,6 +110,8 @@ interface AppContextType {
   isCreateModalOpen: boolean;
   setIsCreateModalOpen: (open: boolean) => void;
   createModalInitialType?: string;
+  createModalEditingItem?: { type: 'project' | 'publication' | 'achievement' | 'article' | 'opportunity'; item: any } | null;
+  setCreateModalEditingItem: (item: { type: 'project' | 'publication' | 'achievement' | 'article' | 'opportunity'; item: any } | null) => void;
   openCreateModalWithType: (type: string) => void;
   
   isLinkedInModalOpen: boolean;
@@ -177,6 +181,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createModalInitialType, setCreateModalInitialType] = useState<string>('achievement');
+  const [createModalEditingItem, setCreateModalEditingItem] = useState<{ type: 'project' | 'publication' | 'achievement' | 'article' | 'opportunity'; item: any } | null>(null);
   const [isLinkedInModalOpen, setIsLinkedInModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false);
@@ -610,7 +615,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
   const hydrateDirectory = (persistedUsers: User[]) => setUsers(persistedUsers);
 
-  const persistContent = async (contentType: string, data: { id: string }) => {
+  const persistContent = async (contentType: string, data: { id: string; ownerId?: string }) => {
     if (!currentUser.id) {
       showToast('Please sign in before publishing.');
       return false;
@@ -621,7 +626,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         id: data.id,
         owner_id: currentUser.id,
         content_type: contentType,
-        data: { ...data, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+        data: { ...data, ownerId: currentUser.id, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
         updated_at: new Date().toISOString()
       }, { onConflict: 'id' });
 
@@ -634,8 +639,57 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const updatePublishedContent = async (contentType: 'project' | 'publication' | 'achievement' | 'article' | 'opportunity' | 'announcement', item: any) => {
+    const ok = await persistContent(contentType, item);
+    if (!ok) return false;
+
+    if (contentType === 'project') {
+      setProjects((prev) => prev.map((entry) => entry.id === item.id ? { ...entry, ...item } : entry));
+    }
+    if (contentType === 'publication') {
+      setPublications((prev) => prev.map((entry) => entry.id === item.id ? { ...entry, ...item } : entry));
+    }
+    if (contentType === 'achievement') {
+      setAchievements((prev) => prev.map((entry) => entry.id === item.id ? { ...entry, ...item } : entry));
+    }
+    if (contentType === 'article') {
+      setArticles((prev) => prev.map((entry) => entry.id === item.id ? { ...entry, ...item } : entry));
+    }
+    if (contentType === 'opportunity') {
+      setOpportunities((prev) => prev.map((entry) => entry.id === item.id ? { ...entry, ...item } : entry));
+    }
+    if (contentType === 'announcement') {
+      setAnnouncements((prev) => prev.map((entry) => entry.id === item.id ? { ...entry, ...item } : entry));
+    }
+    return true;
+  };
+
+  const deletePublishedContent = async (contentType: 'project' | 'publication' | 'achievement' | 'article' | 'opportunity' | 'announcement', id: string) => {
+    if (!currentUser.id) return false;
+
+    try {
+      const { error } = await supabase.from('content_items').delete().eq('id', id).eq('owner_id', currentUser.id);
+      if (error) throw error;
+
+      if (contentType === 'project') setProjects((prev) => prev.filter((entry) => entry.id !== id));
+      if (contentType === 'publication') setPublications((prev) => prev.filter((entry) => entry.id !== id));
+      if (contentType === 'achievement') setAchievements((prev) => prev.filter((entry) => entry.id !== id));
+      if (contentType === 'article') setArticles((prev) => prev.filter((entry) => entry.id !== id));
+      if (contentType === 'opportunity') setOpportunities((prev) => prev.filter((entry) => entry.id !== id));
+      if (contentType === 'announcement') setAnnouncements((prev) => prev.filter((entry) => entry.id !== id));
+
+      showToast('Published item deleted.');
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not delete this item.';
+      showToast(`Delete failed: ${message}`);
+      return false;
+    }
+  };
+
   const openCreateModalWithType = (type: string) => {
     setCreateModalInitialType(type);
+    setCreateModalEditingItem(null);
     setIsCreateModalOpen(true);
   };
 
@@ -700,6 +754,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addOpportunity,
         createAnnouncement,
         addAnnouncement,
+        deletePublishedContent,
+        updatePublishedContent,
         publishAnnouncement,
         submitReport,
         applyLinkedInData,
@@ -734,6 +790,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isCreateModalOpen,
         setIsCreateModalOpen,
         createModalInitialType,
+        createModalEditingItem,
+        setCreateModalEditingItem,
         openCreateModalWithType,
         isLinkedInModalOpen,
         setIsLinkedInModalOpen,
