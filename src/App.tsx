@@ -146,7 +146,7 @@ const MainContent: React.FC = () => {
       const nextPath = `/profile/${selectedUserForProfile.id}`;
       if (window.location.pathname !== nextPath) {
         routeGuardRef.current = true;
-        window.history.pushState({ profileId: selectedUserForProfile.id }, '', nextPath);
+        window.history.replaceState({ profileId: selectedUserForProfile.id }, '', nextPath);
         routeGuardRef.current = false;
       }
       return;
@@ -156,7 +156,7 @@ const MainContent: React.FC = () => {
       const nextPath = `/projects/${selectedProject.id}`;
       if (window.location.pathname !== nextPath) {
         routeGuardRef.current = true;
-        window.history.pushState({ projectId: selectedProject.id }, '', nextPath);
+        window.history.replaceState({ projectId: selectedProject.id }, '', nextPath);
         routeGuardRef.current = false;
       }
       return;
@@ -166,7 +166,7 @@ const MainContent: React.FC = () => {
       const nextPath = `/publications/${selectedPublication.id}`;
       if (window.location.pathname !== nextPath) {
         routeGuardRef.current = true;
-        window.history.pushState({ publicationId: selectedPublication.id }, '', nextPath);
+        window.history.replaceState({ publicationId: selectedPublication.id }, '', nextPath);
         routeGuardRef.current = false;
       }
       return;
@@ -176,7 +176,7 @@ const MainContent: React.FC = () => {
       const nextPath = `/achievements/${selectedAchievement.id}`;
       if (window.location.pathname !== nextPath) {
         routeGuardRef.current = true;
-        window.history.pushState({ achievementId: selectedAchievement.id }, '', nextPath);
+        window.history.replaceState({ achievementId: selectedAchievement.id }, '', nextPath);
         routeGuardRef.current = false;
       }
       return;
@@ -186,7 +186,7 @@ const MainContent: React.FC = () => {
       const nextPath = `/opportunities/${selectedOpportunity.id}`;
       if (window.location.pathname !== nextPath) {
         routeGuardRef.current = true;
-        window.history.pushState({ opportunityId: selectedOpportunity.id }, '', nextPath);
+        window.history.replaceState({ opportunityId: selectedOpportunity.id }, '', nextPath);
         routeGuardRef.current = false;
       }
       return;
@@ -196,7 +196,7 @@ const MainContent: React.FC = () => {
       const nextPath = `/articles/${selectedArticle.id}`;
       if (window.location.pathname !== nextPath) {
         routeGuardRef.current = true;
-        window.history.pushState({ articleId: selectedArticle.id }, '', nextPath);
+        window.history.replaceState({ articleId: selectedArticle.id }, '', nextPath);
         routeGuardRef.current = false;
       }
       return;
@@ -208,7 +208,7 @@ const MainContent: React.FC = () => {
       const fallbackPath = currentTab === 'profile' ? '/profile' : currentTab === 'discover' ? '/discover' : currentTab === 'opportunities' ? '/opportunities' : currentTab === 'network' ? '/network' : currentTab === 'department' ? '/department' : '/';
       if (window.location.pathname !== fallbackPath) {
         routeGuardRef.current = true;
-        window.history.pushState({}, '', fallbackPath);
+        window.history.replaceState({}, '', fallbackPath);
         routeGuardRef.current = false;
       }
     }
@@ -426,18 +426,26 @@ const notificationRowToAppNotification = (notification: Record<string, unknown>)
   avatar: typeof notification.avatar_url === 'string' ? notification.avatar_url : undefined
 });
 
-const contentRowsToAppData = (rows: Array<{ content_type: string; data: unknown }>) => {
-  const result = { projects: [] as User extends never ? never[] : any[], achievements: [] as any[], publications: [] as any[], articles: [] as any[], opportunities: [] as any[], announcements: [] as any[] };
-  for (const row of rows) {
-    if (!row.data || typeof row.data !== 'object') continue;
-    if (row.content_type === 'project') result.projects.push(row.data);
-    if (row.content_type === 'achievement') result.achievements.push(row.data);
-    if (row.content_type === 'publication') result.publications.push(row.data);
-    if (row.content_type === 'article') result.articles.push(row.data);
-    if (row.content_type === 'opportunity') result.opportunities.push(row.data);
-    if (row.content_type === 'announcement') result.announcements.push(row.data);
-  }
-  return result;
+const normalizePersistedContent = <T extends Record<string, unknown>>(record: T, ownerId?: string | null): T => {
+if (!record || typeof record !== 'object') return record;
+const next = { ...record } as Record<string, unknown>;
+if (typeof next.ownerId !== 'string' && typeof ownerId === 'string' && ownerId) next.ownerId = ownerId;
+return next as T;
+};
+
+const contentRowsToAppData = (rows: Array<{ content_type: string; data: unknown; owner_id?: string | null }>) => {
+const result = { projects: [] as User extends never ? never[] : any[], achievements: [] as any[], publications: [] as any[], articles: [] as any[], opportunities: [] as any[], announcements: [] as any[] };
+for (const row of rows) {
+  if (!row.data || typeof row.data !== 'object') continue;
+  const normalizedData = normalizePersistedContent(row.data as Record<string, unknown>, row.owner_id ?? null);
+  if (row.content_type === 'project') result.projects.push(normalizedData);
+  if (row.content_type === 'achievement') result.achievements.push(normalizedData);
+  if (row.content_type === 'publication') result.publications.push(normalizedData);
+  if (row.content_type === 'article') result.articles.push(normalizedData);
+  if (row.content_type === 'opportunity') result.opportunities.push(normalizedData);
+  if (row.content_type === 'announcement') result.announcements.push(normalizedData);
+}
+return result;
 };
 
 const toAppUser = (user: Session['user']): User => {

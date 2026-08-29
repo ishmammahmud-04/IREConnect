@@ -13,13 +13,22 @@ export const ProjectDetailModal: React.FC = () => {
     currentUser,
     deletePublishedContent,
     setCreateModalEditingItem,
-    setIsCreateModalOpen
+    setIsCreateModalOpen,
+    currentTab
   } = useApp();
 
   if (!selectedProject) return null;
 
   const isSaved = isItemSaved(selectedProject.id);
-  const canManage = selectedProject.ownerId === currentUser.id;
+  const canManage = selectedProject.ownerId === currentUser.id || currentUser.role === 'admin' || (selectedProject.teamMembers || []).some((member) => member.name === currentUser.name && member.id === currentUser.id);
+
+  const closeProjectDetail = () => {
+    setSelectedProject(null);
+    if (window.location.pathname.startsWith('/projects/')) {
+      const fallbackPath = currentTab === 'discover' ? '/discover' : currentTab === 'profile' ? '/profile' : currentTab === 'opportunities' ? '/opportunities' : currentTab === 'network' ? '/network' : currentTab === 'department' ? '/department' : '/';
+      window.history.replaceState({}, '', fallbackPath);
+    }
+  };
 
   const handleShare = async () => {
     const shareText = `${selectedProject.title} — ${selectedProject.demoUrl || selectedProject.githubUrl || window.location.href}`;
@@ -33,13 +42,13 @@ export const ProjectDetailModal: React.FC = () => {
 
   const handleDelete = async () => {
     const ok = await deletePublishedContent('project', selectedProject.id);
-    if (ok) setSelectedProject(null);
+    if (ok) closeProjectDetail();
   };
 
   const handleEdit = () => {
     setCreateModalEditingItem({ type: 'project', item: selectedProject });
     setIsCreateModalOpen(true);
-    setSelectedProject(null);
+    closeProjectDetail();
   };
 
   return (
@@ -48,7 +57,7 @@ export const ProjectDetailModal: React.FC = () => {
         {/* Top Action Bar */}
         <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md px-5 py-2.5 border-b border-slate-200 flex items-center justify-between">
           <button
-            onClick={() => setSelectedProject(null)}
+            onClick={closeProjectDetail}
             className="flex items-center gap-1 text-xs font-bold text-slate-700 hover:text-blue-600 transition-colors"
           >
             <span className="material-symbols-outlined text-[16px]">arrow_back</span>
@@ -91,7 +100,7 @@ export const ProjectDetailModal: React.FC = () => {
               </>
             )}
             <button
-              onClick={() => setSelectedProject(null)}
+              onClick={closeProjectDetail}
               className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors"
             >
               <span className="material-symbols-outlined text-[18px]">close</span>
