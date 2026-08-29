@@ -28,6 +28,10 @@ export const CreateModal: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentUser.id) {
+      showToast('Please sign in before publishing.');
+      return;
+    }
     if (!title || !desc) {
       showToast('Please fill out all required fields');
       return;
@@ -37,20 +41,21 @@ export const CreateModal: React.FC = () => {
 
     if (contentType === 'project') {
       createProject({
+        id: `project-${Date.now()}`,
         title,
-        category,
+        category: (category as any) || 'Robotics',
         batch: currentUser.batch || 'Batch 7',
-        year: 2026,
-        description: desc,
-        problem: 'Real-time sensor latency and state estimation in unstructured domains.',
+        year: String(new Date().getFullYear()),
+        problem: 'Need to solve a relevant real-world challenge in the department ecosystem.',
         solution: desc,
+        description: desc,
         technologies: tagArray.length ? tagArray : ['ROS2', 'Python', 'SLAM'],
         coverImage: '',
         supervisor: {
-          id: 'faculty-1',
-           name: currentUser.name,
-           designation: currentUser.headline,
-           avatar: currentUser.avatar
+          id: currentUser.id || 'faculty-1',
+          name: currentUser.name || 'IRE Faculty',
+          designation: currentUser.headline || 'Department Member',
+          avatar: currentUser.avatar || ''
         },
         teamMembers: [
           {
@@ -60,38 +65,60 @@ export const CreateModal: React.FC = () => {
             avatar: currentUser.avatar
           }
         ],
-        githubUrl: 'https://github.com/ire-lab/autonomous-system',
-        createdAt: 'Just now'
+        githubUrl: publicationUrl.trim() || undefined,
+        demoUrl: undefined,
+        docUrl: undefined,
+        mediaGallery: [],
+        relatedAchievements: [],
+        relatedPublications: [],
+        status: 'Ongoing',
+        likesCount: 0
       });
     } else if (contentType === 'publication') {
       createPublication({
+        id: `publication-${Date.now()}`,
         title,
         authors: [currentUser.name],
-        journal: secondaryField || 'Publication venue',
-        doi: '10.1109/TRO.2026.994411',
         publicationType: 'Journal',
-        status: 'Published',
+        journal: secondaryField || 'Publication venue',
+        doi: publicationUrl.trim() || 'Pending DOI',
+        date: new Date().toISOString().slice(0, 10),
         abstract: desc,
         keywords: tagArray.length ? tagArray : ['Robotics', 'Autonomy'],
-        date: 'May 2026',
-            coverImage: '',
-            externalUrl: publicationUrl.trim() || undefined,
+        researchArea: category || 'Research',
+        pdfUrl: undefined,
+        externalUrl: publicationUrl.trim() || undefined,
+        googleScholarUrl: undefined,
+        orcid: undefined,
+        status: 'Published',
+        visibility: 'public',
+        coverImage: '',
+        citations: 0
       });
     } else if (contentType === 'achievement') {
       createAchievement({
+        id: `achievement-${Date.now()}`,
         title,
-        category: category || 'Award',
+        category: (category as any) || 'Award',
         organization: secondaryField || 'Organization',
-        date: 'May 2026',
-        description: desc,
-        appliedSkills: tagArray.length ? tagArray : ['Robotics', 'Leadership'],
         personName: currentUser.name,
         personRole: currentUser.headline,
         personAvatar: currentUser.avatar,
-        image: ''
+        date: new Date().toISOString().slice(0, 10),
+        description: desc,
+        appliedSkills: tagArray.length ? tagArray : ['Robotics', 'Leadership'],
+        image: '',
+        certificateUrl: publicationUrl.trim() || undefined,
+        verificationUrl: undefined,
+        isVerified: true,
+        relatedProjectId: undefined,
+        relatedProjectName: undefined,
+        collaborators: [],
+        visibility: 'public'
       });
     } else if (contentType === 'article') {
       createArticle({
+        id: `article-${Date.now()}`,
         title,
         subtitle: desc.slice(0, 100),
         category: category || 'Technical Blog',
@@ -99,28 +126,38 @@ export const CreateModal: React.FC = () => {
           id: currentUser.id,
           name: currentUser.name,
           role: currentUser.headline,
-          avatar: currentUser.avatar
+          avatar: currentUser.avatar,
+          bio: currentUser.bio
         },
-        date: 'May 2026',
+        date: new Date().toISOString().slice(0, 10),
         readingTime: '5 min read',
         coverImage: '',
         tags: tagArray.length ? tagArray : ['Engineering', 'IRE'],
-        body: [desc, 'This study provides empirical benchmarks and real-world deployment telemetry recorded in our department laboratory.']
+        body: [desc],
+        relatedProjectId: undefined,
+        relatedResearchId: undefined,
+        views: 0
       });
     } else if (contentType === 'opportunity') {
       createOpportunity({
+        id: `opportunity-${Date.now()}`,
         title,
-        type: (category as any) || 'Internship',
         organization: secondaryField || 'Organization',
-        location: 'Hybrid / IRE Innovation Hub',
-        deadline: 'June 30, 2026',
+        organizationLogo: '',
+        type: (category as any) || 'Internship',
         description: desc,
-        skillsRequired: tagArray.length ? tagArray : ['Python', 'ROS'],
+        requirements: desc ? [desc] : ['Please review the full opportunity details.'],
+        requiredSkills: tagArray.length ? tagArray : ['Python', 'ROS'],
+        location: 'Hybrid / IRE Innovation Hub',
+        deadline: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString().slice(0, 10),
+        applicationUrl: publicationUrl.trim() || undefined,
+        contactEmail: currentUser.email || undefined,
         postedBy: {
-          id: currentUser.id,
           name: currentUser.name,
-          role: currentUser.headline
-        }
+          role: currentUser.headline,
+          avatar: currentUser.avatar
+        },
+        isRecommended: false
       });
     }
 

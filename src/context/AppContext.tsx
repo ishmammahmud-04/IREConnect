@@ -354,47 +354,52 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIsMentorshipModalOpen(false);
   };
 
-  const createProject = (project: Project) => {
+  const createProject = async (project: Project) => {
+    const ok = await persistContent('project', project);
+    if (!ok) return;
     setProjects((prev) => [project, ...prev]);
-    void persistContent('project', project);
     showToast(`Project "${project.title}" published successfully!`);
   };
 
   const addProject = createProject;
 
-  const createAchievement = (achievement: Achievement) => {
+  const createAchievement = async (achievement: Achievement) => {
+    const ok = await persistContent('achievement', achievement);
+    if (!ok) return;
     setAchievements((prev) => [achievement, ...prev]);
-    void persistContent('achievement', achievement);
     showToast(`Achievement "${achievement.title}" recorded!`);
   };
 
   const addAchievement = createAchievement;
 
-  const createPublication = (publication: Publication) => {
+  const createPublication = async (publication: Publication) => {
+    const ok = await persistContent('publication', publication);
+    if (!ok) return;
     setPublications((prev) => [publication, ...prev]);
-    void persistContent('publication', publication);
     showToast(`Publication "${publication.title}" submitted!`);
   };
 
   const addPublication = createPublication;
 
-  const createArticle = (article: Article) => {
+  const createArticle = async (article: Article) => {
+    const ok = await persistContent('article', article);
+    if (!ok) return;
     setArticles((prev) => [article, ...prev]);
-    void persistContent('article', article);
     showToast(`Article "${article.title}" published!`);
   };
 
   const addArticle = createArticle;
 
-  const createOpportunity = (opportunity: Opportunity) => {
+  const createOpportunity = async (opportunity: Opportunity) => {
+    const ok = await persistContent('opportunity', opportunity);
+    if (!ok) return;
     setOpportunities((prev) => [opportunity, ...prev]);
-    void persistContent('opportunity', opportunity);
     showToast(`Opportunity "${opportunity.title}" posted!`);
   };
 
   const addOpportunity = createOpportunity;
 
-  const createAnnouncement = (ann: Partial<Announcement> & { title: string; description: string }) => {
+  const createAnnouncement = async (ann: Partial<Announcement> & { title: string; description: string }) => {
     const newAnn: Announcement = {
       id: ann.id || `ann-${Date.now()}`,
       title: ann.title,
@@ -404,8 +409,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       author: ann.author || 'IRE Admin Desk',
       date: ann.date || 'Just now'
     };
+    const ok = await persistContent('announcement', newAnn);
+    if (!ok) return;
     setAnnouncements((prev) => [newAnn, ...prev]);
-    void persistContent('announcement', newAnn);
     showToast(`Announcement "${ann.title}" published!`);
   };
 
@@ -604,8 +610,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
   const hydrateDirectory = (persistedUsers: User[]) => setUsers(persistedUsers);
 
-  const persistContent = (contentType: string, data: { id: string }) =>
-    supabase.from('content_items').upsert({ id: data.id, owner_id: currentUser.id, content_type: contentType, data });
+  const persistContent = async (contentType: string, data: { id: string }) => {
+    if (!currentUser.id) {
+      showToast('Please sign in before publishing.');
+      return false;
+    }
+
+    try {
+      const { error } = await supabase.from('content_items').upsert({
+        id: data.id,
+        owner_id: currentUser.id,
+        content_type: contentType,
+        data: { ...data, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'id' });
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not save this item.';
+      showToast(`Publish failed: ${message}`);
+      return false;
+    }
+  };
 
   const openCreateModalWithType = (type: string) => {
     setCreateModalInitialType(type);
