@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
 type AuthMode = 'login' | 'register' | 'confirmation';
@@ -14,6 +14,33 @@ export const AuthScreen: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    const code = params.get('code');
+    const tokenHash = params.get('token_hash');
+    const hasAuthCallback = Boolean(code || tokenHash || hash.get('access_token') || hash.get('refresh_token'));
+
+    if (!hasAuthCallback) return;
+
+    const finalizeAuth = async () => {
+      try {
+        if (code) {
+          await supabase.auth.exchangeCodeForSession(code);
+        }
+        if (tokenHash) {
+          await supabase.auth.getSession();
+        }
+      } catch (callbackError) {
+        console.error('Auth callback failed:', callbackError);
+      } finally {
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    };
+
+    void finalizeAuth();
+  }, []);
+
   const resetStatus = () => setError(null);
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -25,7 +52,12 @@ export const AuthScreen: React.FC = () => {
       if (!isUftbEmail(email)) throw new Error('Only UFTB email addresses can access this network.');
       if (mode === 'login') {
         const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-        if (signInError) throw signInError;
+        if (signInError) {
+          if (signInError.message.toLowerCase().includes('not confirmed')) {
+            throw new Error('Your email is not confirmed yet. Re-send the confirmation email or confirm the Supabase Auth redirect URL is configured correctly.');
+          }
+          throw signInError;
+        }
         return;
       }
 
