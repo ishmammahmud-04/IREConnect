@@ -29,12 +29,170 @@ import { AuthScreen } from './components/AuthScreen';
 import { supabase } from './lib/supabase';
 import { AppNotification, User } from './types';
 
+const getRouteState = (pathname: string) => {
+  const normalizedPath = pathname.split('?')[0].replace(/\/+$/, '') || '/';
+  const tabRoutes: Record<string, string> = {
+   '/': 'home',
+   '/discover': 'discover',
+   '/network': 'network',
+   '/opportunities': 'opportunities',
+   '/department': 'department',
+   '/profile': 'profile',
+   '/admin': 'admin'
+  };
+
+  if (normalizedPath.startsWith('/profile/')) {
+   return { tab: 'profile', userId: normalizedPath.slice('/profile/'.length) || null, projectId: null, publicationId: null, achievementId: null, articleId: null, opportunityId: null };
+  }
+
+  if (normalizedPath.startsWith('/projects/')) {
+   return { tab: 'discover', userId: null, projectId: normalizedPath.slice('/projects/'.length) || null, publicationId: null, achievementId: null, articleId: null, opportunityId: null };
+  }
+
+  if (normalizedPath.startsWith('/publications/')) {
+   return { tab: 'discover', userId: null, projectId: null, publicationId: normalizedPath.slice('/publications/'.length) || null, achievementId: null, articleId: null, opportunityId: null };
+  }
+
+  if (normalizedPath.startsWith('/achievements/')) {
+   return { tab: 'profile', userId: null, projectId: null, publicationId: null, achievementId: normalizedPath.slice('/achievements/'.length) || null, articleId: null, opportunityId: null };
+  }
+
+  if (normalizedPath.startsWith('/articles/')) {
+   return { tab: 'discover', userId: null, projectId: null, publicationId: null, achievementId: null, articleId: normalizedPath.slice('/articles/'.length) || null, opportunityId: null };
+  }
+
+  if (normalizedPath.startsWith('/opportunities/')) {
+   return { tab: 'opportunities', userId: null, projectId: null, publicationId: null, achievementId: null, articleId: null, opportunityId: normalizedPath.slice('/opportunities/'.length) || null };
+  }
+
+  return { tab: tabRoutes[normalizedPath] || 'home', userId: null, projectId: null, publicationId: null, achievementId: null, articleId: null, opportunityId: null };
+};
+
 const MainContent: React.FC = () => {
-  const { currentTab, selectedUserForProfile, setSelectedUserForProfile, toastMessage, currentUser } = useApp();
+  const {
+    currentTab,
+    selectedUserForProfile,
+    setSelectedUserForProfile,
+    selectedProject,
+    setSelectedProject,
+    selectedPublication,
+    setSelectedPublication,
+    selectedAchievement,
+    setSelectedAchievement,
+    selectedOpportunity,
+    setSelectedOpportunity,
+    selectedArticle,
+    setSelectedArticle,
+    toastMessage,
+    currentUser,
+    users,
+    projects,
+    publications,
+    achievements,
+    articles,
+    opportunities,
+    syncCurrentTabFromPath,
+  } = useApp();
 
   useEffect(() => {
-    setSelectedUserForProfile(null);
-  }, [currentTab, setSelectedUserForProfile]);
+    if (!selectedUserForProfile) return;
+    const currentPath = window.location.pathname;
+    if (!currentPath.startsWith('/profile/')) {
+      setSelectedUserForProfile(null);
+    }
+  }, [currentTab, selectedUserForProfile, setSelectedUserForProfile]);
+
+  useEffect(() => {
+    const syncFromLocation = () => {
+      const { userId, projectId, publicationId, achievementId, articleId, opportunityId } = getRouteState(window.location.pathname);
+      syncCurrentTabFromPath(window.location.pathname);
+
+      if (userId) {
+        const nextUser = users.find((user) => user.id === userId) || null;
+        setSelectedUserForProfile(nextUser);
+        setSelectedProject(null);
+        setSelectedPublication(null);
+        setSelectedAchievement(null);
+        setSelectedOpportunity(null);
+        setSelectedArticle(null);
+        return;
+      }
+
+      const nextProject = projectId ? projects.find((project) => project.id === projectId) || null : null;
+      const nextPublication = publicationId ? publications.find((publication) => publication.id === publicationId) || null : null;
+      const nextAchievement = achievementId ? achievements.find((achievement) => achievement.id === achievementId) || null : null;
+      const nextArticle = articleId ? articles.find((article) => article.id === articleId) || null : null;
+      const nextOpportunity = opportunityId ? opportunities.find((opportunity) => opportunity.id === opportunityId) || null : null;
+
+      setSelectedUserForProfile(null);
+      setSelectedProject(nextProject);
+      setSelectedPublication(nextPublication);
+      setSelectedAchievement(nextAchievement);
+      setSelectedOpportunity(nextOpportunity);
+      setSelectedArticle(nextArticle);
+    };
+
+    syncFromLocation();
+    window.addEventListener('popstate', syncFromLocation);
+    return () => window.removeEventListener('popstate', syncFromLocation);
+  }, [users, projects, publications, achievements, articles, opportunities, setSelectedUserForProfile, setSelectedProject, setSelectedPublication, setSelectedAchievement, setSelectedOpportunity, setSelectedArticle, syncCurrentTabFromPath]);
+
+  useEffect(() => {
+    if (selectedUserForProfile) {
+      const nextPath = `/profile/${selectedUserForProfile.id}`;
+      if (window.location.pathname !== nextPath) {
+        window.history.pushState({ profileId: selectedUserForProfile.id }, '', nextPath);
+      }
+      return;
+    }
+
+    if (selectedProject) {
+      const nextPath = `/projects/${selectedProject.id}`;
+      if (window.location.pathname !== nextPath) {
+        window.history.pushState({ projectId: selectedProject.id }, '', nextPath);
+      }
+      return;
+    }
+
+    if (selectedPublication) {
+      const nextPath = `/publications/${selectedPublication.id}`;
+      if (window.location.pathname !== nextPath) {
+        window.history.pushState({ publicationId: selectedPublication.id }, '', nextPath);
+      }
+      return;
+    }
+
+    if (selectedAchievement) {
+      const nextPath = `/achievements/${selectedAchievement.id}`;
+      if (window.location.pathname !== nextPath) {
+        window.history.pushState({ achievementId: selectedAchievement.id }, '', nextPath);
+      }
+      return;
+    }
+
+    if (selectedOpportunity) {
+      const nextPath = `/opportunities/${selectedOpportunity.id}`;
+      if (window.location.pathname !== nextPath) {
+        window.history.pushState({ opportunityId: selectedOpportunity.id }, '', nextPath);
+      }
+      return;
+    }
+
+    if (selectedArticle) {
+      const nextPath = `/articles/${selectedArticle.id}`;
+      if (window.location.pathname !== nextPath) {
+        window.history.pushState({ articleId: selectedArticle.id }, '', nextPath);
+      }
+      return;
+    }
+
+    if (window.location.pathname.startsWith('/profile/')) {
+      const fallbackPath = currentTab === 'profile' ? '/profile' : currentTab === 'discover' ? '/discover' : currentTab === 'opportunities' ? '/opportunities' : '/';
+      if (fallbackPath !== window.location.pathname) {
+        window.history.pushState({}, '', fallbackPath);
+      }
+    }
+  }, [selectedUserForProfile, selectedProject, selectedPublication, selectedAchievement, selectedOpportunity, selectedArticle, currentTab]);
 
   const renderActiveScreen = () => {
     // If a user profile is selected from any screen, show that user's profile
@@ -42,7 +200,12 @@ const MainContent: React.FC = () => {
       return (
         <ProfileView
           userOverride={selectedUserForProfile}
-          onBack={() => setSelectedUserForProfile(null)}
+          onBack={() => {
+            setSelectedUserForProfile(null);
+            if (window.history.length > 1) {
+              window.history.back();
+            }
+          }}
         />
       );
     }

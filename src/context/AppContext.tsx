@@ -24,6 +24,7 @@ interface AppContextType {
   setCurrentUser: (user: User) => void;
   currentTab: MainTab;
   setCurrentTab: (tab: MainTab) => void;
+  syncCurrentTabFromPath: (path: string) => void;
   
   // Data
   users: User[];
@@ -153,7 +154,7 @@ const emptyUser: User = {
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User>(emptyUser);
-  const [currentTab, setCurrentTab] = useState<MainTab>('home');
+  const [currentTab, setCurrentTabState] = useState<MainTab>('home');
   const [users, setUsers] = useState<User[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
@@ -196,6 +197,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isUploadingProfileImage, setIsUploadingProfileImage] = useState(false);
   const [isChatModalOpen, setIsChatModalOpen] = useState(false);
   const [chatTargetUser, setChatTargetUser] = useState<User | null>(null);
+
+  const tabToPath: Record<MainTab, string> = {
+    home: '/',
+    discover: '/discover',
+    network: '/network',
+    opportunities: '/opportunities',
+    department: '/department',
+    profile: '/profile',
+    admin: '/admin'
+  };
+
+  const setCurrentTab = (tab: MainTab) => {
+    setCurrentTabState(tab);
+    if (typeof window === 'undefined') return;
+    const nextPath = tabToPath[tab];
+    if (nextPath && window.location.pathname !== nextPath) {
+      window.history.pushState({ tab }, '', nextPath);
+    }
+  };
+
+  const syncCurrentTabFromPath = (path: string) => {
+    const normalizedPath = path.split('?')[0].replace(/\/+$/, '') || '/';
+    if (normalizedPath.startsWith('/profile/')) {
+      setCurrentTabState('profile');
+      return;
+    }
+
+    const routeMap: Record<string, MainTab> = {
+      '/': 'home',
+      '/discover': 'discover',
+      '/network': 'network',
+      '/opportunities': 'opportunities',
+      '/department': 'department',
+      '/profile': 'profile',
+      '/admin': 'admin'
+    };
+    setCurrentTabState(routeMap[normalizedPath] || 'home');
+  };
 
   const connectionRequests = useMemo(
     () => workflowToConnectionRequests(workflowItems, users, currentUser.id),
@@ -713,6 +752,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setCurrentUser,
         currentTab,
         setCurrentTab,
+        syncCurrentTabFromPath,
         users,
         projects,
         achievements,
