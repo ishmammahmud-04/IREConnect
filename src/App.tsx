@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { AppProvider, useApp } from './context/AppContext';
 import { Header } from './components/Header';
@@ -93,6 +93,7 @@ const MainContent: React.FC = () => {
     opportunities,
     syncCurrentTabFromPath,
   } = useApp();
+  const routeGuardRef = useRef(false);
 
   useEffect(() => {
     if (!selectedUserForProfile) return;
@@ -104,6 +105,7 @@ const MainContent: React.FC = () => {
 
   useEffect(() => {
     const syncFromLocation = () => {
+      if (routeGuardRef.current) return;
       const { userId, projectId, publicationId, achievementId, articleId, opportunityId } = getRouteState(window.location.pathname);
       syncCurrentTabFromPath(window.location.pathname);
 
@@ -138,10 +140,14 @@ const MainContent: React.FC = () => {
   }, [users, projects, publications, achievements, articles, opportunities, setSelectedUserForProfile, setSelectedProject, setSelectedPublication, setSelectedAchievement, setSelectedOpportunity, setSelectedArticle, syncCurrentTabFromPath]);
 
   useEffect(() => {
+    if (routeGuardRef.current) return;
+
     if (selectedUserForProfile) {
       const nextPath = `/profile/${selectedUserForProfile.id}`;
       if (window.location.pathname !== nextPath) {
+        routeGuardRef.current = true;
         window.history.pushState({ profileId: selectedUserForProfile.id }, '', nextPath);
+        routeGuardRef.current = false;
       }
       return;
     }
@@ -149,7 +155,9 @@ const MainContent: React.FC = () => {
     if (selectedProject) {
       const nextPath = `/projects/${selectedProject.id}`;
       if (window.location.pathname !== nextPath) {
+        routeGuardRef.current = true;
         window.history.pushState({ projectId: selectedProject.id }, '', nextPath);
+        routeGuardRef.current = false;
       }
       return;
     }
@@ -157,7 +165,9 @@ const MainContent: React.FC = () => {
     if (selectedPublication) {
       const nextPath = `/publications/${selectedPublication.id}`;
       if (window.location.pathname !== nextPath) {
+        routeGuardRef.current = true;
         window.history.pushState({ publicationId: selectedPublication.id }, '', nextPath);
+        routeGuardRef.current = false;
       }
       return;
     }
@@ -165,7 +175,9 @@ const MainContent: React.FC = () => {
     if (selectedAchievement) {
       const nextPath = `/achievements/${selectedAchievement.id}`;
       if (window.location.pathname !== nextPath) {
+        routeGuardRef.current = true;
         window.history.pushState({ achievementId: selectedAchievement.id }, '', nextPath);
+        routeGuardRef.current = false;
       }
       return;
     }
@@ -173,7 +185,9 @@ const MainContent: React.FC = () => {
     if (selectedOpportunity) {
       const nextPath = `/opportunities/${selectedOpportunity.id}`;
       if (window.location.pathname !== nextPath) {
+        routeGuardRef.current = true;
         window.history.pushState({ opportunityId: selectedOpportunity.id }, '', nextPath);
+        routeGuardRef.current = false;
       }
       return;
     }
@@ -181,19 +195,23 @@ const MainContent: React.FC = () => {
     if (selectedArticle) {
       const nextPath = `/articles/${selectedArticle.id}`;
       if (window.location.pathname !== nextPath) {
+        routeGuardRef.current = true;
         window.history.pushState({ articleId: selectedArticle.id }, '', nextPath);
+        routeGuardRef.current = false;
       }
       return;
     }
 
     const detailPrefixes = ['/profile/', '/projects/', '/publications/', '/achievements/', '/opportunities/', '/articles/'];
-   const isDetailRoute = detailPrefixes.some((prefix) => window.location.pathname.startsWith(prefix));
-   if (isDetailRoute) {
-     const fallbackPath = currentTab === 'profile' ? '/profile' : currentTab === 'discover' ? '/discover' : currentTab === 'opportunities' ? '/opportunities' : currentTab === 'network' ? '/network' : currentTab === 'department' ? '/department' : '/';
-     if (window.location.pathname !== fallbackPath) {
-       window.history.pushState({}, '', fallbackPath);
-     }
-   }
+    const isDetailRoute = detailPrefixes.some((prefix) => window.location.pathname.startsWith(prefix));
+    if (isDetailRoute) {
+      const fallbackPath = currentTab === 'profile' ? '/profile' : currentTab === 'discover' ? '/discover' : currentTab === 'opportunities' ? '/opportunities' : currentTab === 'network' ? '/network' : currentTab === 'department' ? '/department' : '/';
+      if (window.location.pathname !== fallbackPath) {
+        routeGuardRef.current = true;
+        window.history.pushState({}, '', fallbackPath);
+        routeGuardRef.current = false;
+      }
+    }
   }, [selectedUserForProfile, selectedProject, selectedPublication, selectedAchievement, selectedOpportunity, selectedArticle, currentTab]);
 
   const renderActiveScreen = () => {
@@ -390,8 +408,15 @@ const notificationRowToAppNotification = (notification: Record<string, unknown>)
   time: notification.created_at ? new Date(String(notification.created_at)).toLocaleString() : 'Just now',
   isToday: notification.created_at ? new Date(String(notification.created_at)).toDateString() === new Date().toDateString() : true,
   isRead: Boolean(notification.is_read),
-  type: notification.notification_type === 'connection' || notification.notification_type === 'mentorship' || notification.notification_type === 'opportunity' || notification.notification_type === 'announcement' || notification.notification_type === 'event' ? notification.notification_type : 'verification',
-  destination: notification.notification_type === 'connection' || notification.notification_type === 'mentorship'
+  type: notification.notification_type === 'connection'
+    || notification.notification_type === 'mentorship'
+    || notification.notification_type === 'opportunity'
+    || notification.notification_type === 'announcement'
+    || notification.notification_type === 'event'
+    || notification.notification_type === 'message'
+    ? String(notification.notification_type)
+    : 'verification',
+  destination: notification.notification_type === 'connection' || notification.notification_type === 'mentorship' || notification.notification_type === 'message'
     ? 'network'
     : notification.notification_type === 'opportunity'
       ? 'opportunities'

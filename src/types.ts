@@ -279,7 +279,7 @@ export interface AppNotification {
   time: string;
   isToday: boolean;
   isRead: boolean;
-  type: 'connection' | 'mentorship' | 'opportunity' | 'announcement' | 'event' | 'verification';
+  type: 'connection' | 'mentorship' | 'opportunity' | 'announcement' | 'event' | 'message' | 'verification';
   destination?: 'network' | 'opportunities' | 'department' | 'profile';
   avatar?: string;
 }

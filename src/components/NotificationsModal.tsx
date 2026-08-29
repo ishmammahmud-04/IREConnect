@@ -8,6 +8,7 @@ const notificationIcons: Record<AppNotification['type'], string> = {
   opportunity: 'work',
   announcement: 'campaign',
   event: 'event',
+  message: 'chat_bubble',
   verification: 'verified'
 };
 
