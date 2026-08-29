@@ -154,66 +154,6 @@ export const HomeDashboard: React.FC = () => {
         </div>
       </section>
 
-      {/* Department Updates Carousel */}
-      <section>
-        <div className="flex items-center justify-between mb-2.5">
-          <h2 className="font-heading text-[16px] md:text-[18px] font-bold text-slate-900">
-            Department Updates &amp; Notices
-          </h2>
-          <button
-            onClick={() => setCurrentTab('department')}
-            className="text-xs font-bold text-blue-600 hover:text-blue-700"
-          >
-            View All
-          </button>
-        </div>
-
-        <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1 -mx-4 px-4 md:mx-0 md:px-0 snap-x">
-          {announcements.map((ann) => (
-            <div
-              key={ann.id}
-              onClick={() => setCurrentTab('department')}
-              className={`snap-start shrink-0 w-[280px] md:w-[320px] bg-white rounded-xl border p-4 shadow-2xs hover:shadow-xs transition-all cursor-pointer flex flex-col justify-between ${
-                ann.isPinned ? 'border-blue-500 ring-1 ring-blue-500/20' : 'border-slate-200'
-              }`}
-            >
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span
-                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                      ann.category === 'Exam Notice'
-                        ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                        : ann.category === 'Workshop'
-                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                        : 'bg-amber-50 text-amber-800 border border-amber-200'
-                    }`}
-                  >
-                    {ann.isPinned && (
-                      <span className="material-symbols-outlined text-[12px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                        push_pin
-                      </span>
-                    )}
-                    {ann.category}
-                  </span>
-                  <span className="text-[10px] font-mono text-slate-400">{ann.date}</span>
-                </div>
-                <h3 className="font-heading text-[14px] font-bold text-slate-900 mb-1 line-clamp-2 leading-snug">
-                  {ann.title}
-                </h3>
-                <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
-                  {ann.description}
-                </p>
-              </div>
-              {ann.image && (
-                <div className="mt-3 rounded-lg overflow-hidden h-20 bg-slate-100 border border-slate-100">
-                  <img src={ann.image} alt={ann.title} className="w-full h-full object-cover" />
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </section>
-
       {/* Featured Editorial Highlight */}
       {articles.length > 0 && (
         <section className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-4 md:p-5 overflow-hidden">
