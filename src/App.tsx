@@ -186,12 +186,14 @@ const MainContent: React.FC = () => {
       return;
     }
 
-    if (window.location.pathname.startsWith('/profile/')) {
-      const fallbackPath = currentTab === 'profile' ? '/profile' : currentTab === 'discover' ? '/discover' : currentTab === 'opportunities' ? '/opportunities' : '/';
-      if (fallbackPath !== window.location.pathname) {
-        window.history.pushState({}, '', fallbackPath);
-      }
-    }
+    const detailPrefixes = ['/profile/', '/projects/', '/publications/', '/achievements/', '/opportunities/', '/articles/'];
+   const isDetailRoute = detailPrefixes.some((prefix) => window.location.pathname.startsWith(prefix));
+   if (isDetailRoute) {
+     const fallbackPath = currentTab === 'profile' ? '/profile' : currentTab === 'discover' ? '/discover' : currentTab === 'opportunities' ? '/opportunities' : currentTab === 'network' ? '/network' : currentTab === 'department' ? '/department' : '/';
+     if (window.location.pathname !== fallbackPath) {
+       window.history.pushState({}, '', fallbackPath);
+     }
+   }
   }, [selectedUserForProfile, selectedProject, selectedPublication, selectedAchievement, selectedOpportunity, selectedArticle, currentTab]);
 
   const renderActiveScreen = () => {
