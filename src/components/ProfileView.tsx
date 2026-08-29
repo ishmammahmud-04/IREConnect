@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { User } from '../types';
 import { FacultyProfileView } from './FacultyProfileView';
@@ -28,6 +28,54 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
 
   const user = userOverride || currentUser;
   const isOwnProfile = user.id === currentUser.id;
+  const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
+
+  const clampZoom = (value: number) => Math.min(3, Math.max(1, Number(value.toFixed(2))));
+
+  const openImageViewer = (imageUrl: string) => {
+    setZoomedImage(imageUrl);
+    setZoomLevel(1);
+    setPan({ x: 0, y: 0 });
+  };
+
+  const closeImageViewer = () => {
+    setZoomedImage(null);
+    setZoomLevel(1);
+    setPan({ x: 0, y: 0 });
+    setIsDragging(false);
+    dragStartRef.current = null;
+  };
+
+  const handleWheelZoom = (event: React.WheelEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const delta = event.deltaY > 0 ? -0.25 : 0.25;
+    setZoomLevel((current) => clampZoom(current + delta));
+  };
+
+  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (zoomLevel <= 1) return;
+    setIsDragging(true);
+    dragStartRef.current = { x: event.clientX, y: event.clientY, panX: pan.x, panY: pan.y };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDragging || !dragStartRef.current) return;
+    const dx = event.clientX - dragStartRef.current.x;
+    const dy = event.clientY - dragStartRef.current.y;
+    setPan({ x: dragStartRef.current.panX + dx / 1.2, y: dragStartRef.current.panY + dy / 1.2 });
+  };
+
+  const handlePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    setIsDragging(false);
+    dragStartRef.current = null;
+    event.currentTarget.releasePointerCapture(event.pointerId);
+  };
+
   if (user.role === 'faculty' || user.role === 'former_faculty') {
     return <FacultyProfileView facultyUser={user} onBack={onBack} />;
   }
@@ -53,6 +101,46 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto animate-in fade-in duration-300 pb-16">
+      {zoomedImage && (
+        <div
+          className="fixed inset-0 z-[60] bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={closeImageViewer}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') closeImageViewer();
+          }}
+          role="dialog"
+          aria-modal="true"
+          tabIndex={0}
+        >
+          <div className="relative w-full max-w-4xl max-h-[90vh] flex flex-col items-center" onClick={(event) => event.stopPropagation()}>
+            <div className="mb-3 flex items-center justify-end gap-2 w-full">
+              <button type="button" onClick={() => setZoomLevel((value) => clampZoom(value - 0.25))} className="rounded-lg border border-white/20 bg-white/10 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-white/20">−</button>
+              <button type="button" onClick={() => setZoomLevel(1)} className="rounded-lg border border-white/20 bg-white/10 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-white/20">Reset</button>
+              <span className="min-w-12 text-center text-xs font-bold text-white">{zoomLevel.toFixed(2)}x</span>
+              <button type="button" onClick={() => setZoomLevel((value) => clampZoom(value + 0.25))} className="rounded-lg border border-white/20 bg-white/10 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-white/20">+</button>
+              <button type="button" onClick={closeImageViewer} className="rounded-lg border border-white/20 bg-white/10 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-white/20">Close</button>
+            </div>
+            <div
+              className="w-full overflow-hidden rounded-xl border border-white/20 bg-slate-950/80 p-2 select-none"
+              onWheel={handleWheelZoom}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerLeave={handlePointerUp}
+            >
+              <img
+                src={zoomedImage}
+                alt="Expanded profile media"
+                className="max-h-[80vh] w-full object-contain rounded-lg transition-transform duration-200 ease-out cursor-grab active:cursor-grabbing"
+                style={{
+                  transform: `scale(${zoomLevel}) translate(${pan.x}px, ${pan.y}px)`,
+                  transformOrigin: 'center center'
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
       {/* Back button if viewing another profile */}
       {onBack && (
         <button
@@ -67,16 +155,32 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
       {/* Profile Header Identity Card */}
       <section className="bg-white rounded-xl border border-slate-200 shadow-2xs p-5 md:p-6 relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-20 bg-slate-900">
-          {user.bannerUrl && <img src={user.bannerUrl} alt="Profile banner" className="w-full h-full object-cover" />}
+          {user.bannerUrl && (
+            <button
+              type="button"
+              onClick={() => openImageViewer(user.bannerUrl!)}
+              className="block w-full h-full overflow-hidden"
+              aria-label="View profile banner in full size"
+            >
+              <img src={user.bannerUrl} alt="Profile banner" className="w-full h-full object-cover transition-transform duration-200 hover:scale-[1.02]" />
+            </button>
+          )}
         </div>
 
         <div className="relative z-10 flex flex-col md:flex-row items-center md:items-end gap-5 pt-4">
           <div className="relative">
-            <img
-              src={user.avatar}
-              alt={user.name}
-              className="w-24 h-24 md:w-28 md:h-28 rounded-xl object-cover border-3 border-white shadow-xs bg-slate-100"
-            />
+            <button
+              type="button"
+              onClick={() => openImageViewer(user.avatar)}
+              className="block rounded-xl overflow-hidden border-3 border-white shadow-xs bg-slate-100"
+              aria-label="View profile photo in full size"
+            >
+              <img
+                src={user.avatar}
+                alt={user.name}
+                className="w-24 h-24 md:w-28 md:h-28 rounded-xl object-cover"
+              />
+            </button>
             {isOwnProfile && (
               <button
                 onClick={() => setIsSettingsModalOpen(true)}

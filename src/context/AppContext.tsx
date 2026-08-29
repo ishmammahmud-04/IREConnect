@@ -40,6 +40,7 @@ interface AppContextType {
   savedItemIds: Set<string>;
   networkStats: { students: number; alumni: number; projects: number };
   getConnectionCount: (userId: string) => number;
+  getMutualConnectionCount: (userId: string) => number;
   getConnectionUsers: (status: 'connected' | 'pending', direction?: 'incoming' | 'outgoing') => User[];
   updateProfileImage: (file: File, type: 'avatar' | 'banner') => Promise<void>;
   isUploadingProfileImage: boolean;
@@ -57,11 +58,17 @@ interface AppContextType {
   declineConnectionRequest: (requestId: string) => void;
   sendConnectionRequest: (userId: string) => void;
   submitMentorshipRequest: (request: { mentorId: string; topic: string; goals: string; preferredFrequency: string }) => void;
+  createProject: (project: Project) => void;
   addProject: (project: Project) => void;
+  createAchievement: (achievement: Achievement) => void;
   addAchievement: (achievement: Achievement) => void;
+  createPublication: (publication: Publication) => void;
   addPublication: (publication: Publication) => void;
+  createArticle: (article: Article) => void;
   addArticle: (article: Article) => void;
+  createOpportunity: (opportunity: Opportunity) => void;
   addOpportunity: (opportunity: Opportunity) => void;
+  createAnnouncement: (announcement: Partial<Announcement> & { title: string; description: string }) => void;
   addAnnouncement: (announcement: Partial<Announcement> & { title: string; description: string }) => void;
   publishAnnouncement?: (announcement: Partial<Announcement> & { title: string; description: string }) => void;
   submitReport: (contentTitle: string, reason: string, details: string) => void;
@@ -197,6 +204,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const getConnectionCount = (userId: string) => workflowItems.filter(
     (item) => item.workflow_type === 'connection_request' && item.status === 'accepted' && (item.requester_id === userId || item.recipient_id === userId)
   ).length;
+
+  const getMutualConnectionCount = (userId: string) => {
+    if (!currentUser.id || userId === currentUser.id) return 0;
+
+    const myAcceptedConnectionIds = new Set(
+      workflowItems
+        .filter(
+          (item) =>
+            item.workflow_type === 'connection_request' &&
+            item.status === 'accepted' &&
+            (item.requester_id === currentUser.id || item.recipient_id === currentUser.id)
+        )
+        .map((item) => (item.requester_id === currentUser.id ? item.recipient_id : item.requester_id))
+        .filter((id): id is string => Boolean(id))
+    );
+
+    const otherAcceptedConnectionIds = new Set(
+      workflowItems
+        .filter(
+          (item) =>
+            item.workflow_type === 'connection_request' &&
+            item.status === 'accepted' &&
+            (item.requester_id === userId || item.recipient_id === userId)
+        )
+        .map((item) => (item.requester_id === userId ? item.recipient_id : item.requester_id))
+        .filter((id): id is string => Boolean(id))
+    );
+
+    let mutualCount = 0;
+    myAcceptedConnectionIds.forEach((id) => {
+      if (otherAcceptedConnectionIds.has(id)) mutualCount += 1;
+    });
+
+    return mutualCount;
+  };
+
   const getConnectionStatus = (userId: string): 'connected' | 'pending' | 'none' => {
     const workflow = workflowItems.find((item) => item.workflow_type === 'connection_request' &&
       ((item.requester_id === currentUser.id && item.recipient_id === userId) || (item.requester_id === userId && item.recipient_id === currentUser.id)));
@@ -311,37 +354,47 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIsMentorshipModalOpen(false);
   };
 
-  const addProject = (project: Project) => {
+  const createProject = (project: Project) => {
     setProjects((prev) => [project, ...prev]);
     void persistContent('project', project);
     showToast(`Project "${project.title}" published successfully!`);
   };
 
-  const addAchievement = (achievement: Achievement) => {
+  const addProject = createProject;
+
+  const createAchievement = (achievement: Achievement) => {
     setAchievements((prev) => [achievement, ...prev]);
     void persistContent('achievement', achievement);
     showToast(`Achievement "${achievement.title}" recorded!`);
   };
 
-  const addPublication = (publication: Publication) => {
+  const addAchievement = createAchievement;
+
+  const createPublication = (publication: Publication) => {
     setPublications((prev) => [publication, ...prev]);
     void persistContent('publication', publication);
     showToast(`Publication "${publication.title}" submitted!`);
   };
 
-  const addArticle = (article: Article) => {
+  const addPublication = createPublication;
+
+  const createArticle = (article: Article) => {
     setArticles((prev) => [article, ...prev]);
     void persistContent('article', article);
     showToast(`Article "${article.title}" published!`);
   };
 
-  const addOpportunity = (opportunity: Opportunity) => {
+  const addArticle = createArticle;
+
+  const createOpportunity = (opportunity: Opportunity) => {
     setOpportunities((prev) => [opportunity, ...prev]);
     void persistContent('opportunity', opportunity);
     showToast(`Opportunity "${opportunity.title}" posted!`);
   };
 
-  const addAnnouncement = (ann: Partial<Announcement> & { title: string; description: string }) => {
+  const addOpportunity = createOpportunity;
+
+  const createAnnouncement = (ann: Partial<Announcement> & { title: string; description: string }) => {
     const newAnn: Announcement = {
       id: ann.id || `ann-${Date.now()}`,
       title: ann.title,
@@ -355,6 +408,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     void persistContent('announcement', newAnn);
     showToast(`Announcement "${ann.title}" published!`);
   };
+
+  const addAnnouncement = createAnnouncement;
 
   const publishAnnouncement = (ann: Partial<Announcement> & { title: string; description: string }) => {
     void (async () => {
@@ -467,8 +522,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateProfileImage = async (file: File, type: 'avatar' | 'banner') => {
+    const normalizedName = file.name.toLowerCase();
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/bmp'];
+    const isAllowedPhoto = allowedMimeTypes.includes(file.type) || /\.(jpe?g|png|webp|bmp)$/i.test(normalizedName);
+
     if (!currentUser.id || !file.type.startsWith('image/')) {
-      showToast('Please choose an image file.');
+      showToast('Please choose a standard image file.');
+      return;
+    }
+    if (!isAllowedPhoto || /\.(gif|gifv|webm|mp4|mov|avi|m4v|mkv)$/i.test(normalizedName) || file.type === 'image/gif') {
+      showToast('Only standard photo formats are allowed: JPG, JPEG, PNG, WEBP, or BMP. GIFs and videos are not supported.');
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
@@ -583,6 +646,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         savedItemIds,
         networkStats,
         getConnectionCount,
+        getMutualConnectionCount,
         getConnectionUsers,
         getConnectionStatus,
         updateProfileImage,
@@ -597,11 +661,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         declineConnectionRequest,
         sendConnectionRequest,
         submitMentorshipRequest,
+        createProject,
         addProject,
+        createAchievement,
         addAchievement,
+        createPublication,
         addPublication,
+        createArticle,
         addArticle,
+        createOpportunity,
         addOpportunity,
+        createAnnouncement,
         addAnnouncement,
         publishAnnouncement,
         submitReport,

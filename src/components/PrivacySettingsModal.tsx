@@ -200,9 +200,9 @@ export const PrivacySettingsModal: React.FC = () => {
                 </button>
               </div>
             </div>
-            <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={(event) => void handleImageSelected(event, 'avatar')} />
-            <input ref={bannerInputRef} type="file" accept="image/*" className="hidden" onChange={(event) => void handleImageSelected(event, 'banner')} />
-            <p className="text-[10px] text-slate-500">{isUploadingProfileImage ? 'Uploading image...' : 'Camera access depends on your browser and device permissions.'}</p>
+            <input ref={avatarInputRef} type="file" accept=".jpg,.jpeg,.png,.webp,.bmp,image/jpeg,image/png,image/webp,image/bmp" className="hidden" onChange={(event) => void handleImageSelected(event, 'avatar')} />
+            <input ref={bannerInputRef} type="file" accept=".jpg,.jpeg,.png,.webp,.bmp,image/jpeg,image/png,image/webp,image/bmp" className="hidden" onChange={(event) => void handleImageSelected(event, 'banner')} />
+            <p className="text-[10px] text-slate-500">{isUploadingProfileImage ? 'Uploading image...' : 'Accepted formats: JPG, JPEG, PNG, WEBP, and BMP. GIFs and videos are not supported.'}</p>
           </div>
 
           {cameraType && (

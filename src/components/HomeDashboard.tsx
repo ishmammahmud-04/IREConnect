@@ -16,8 +16,9 @@ export const HomeDashboard: React.FC = () => {
     articles,
     sendConnectionRequest,
     setIsCreateModalOpen,
-    networkStats
-    , getConnectionStatus
+    networkStats,
+    getConnectionStatus,
+    getMutualConnectionCount
   } = useApp();
 
   const otherUsers = users.filter((u) => u.id !== currentUser.id);
@@ -312,7 +313,7 @@ export const HomeDashboard: React.FC = () => {
                   </div>
                   <p className="text-[10px] text-slate-500 truncate">{user.headline}</p>
                   <p className="text-[10px] text-blue-600 font-medium mt-0.5">
-                    {user.batch || user.role} • {user.mutualConnectionsCount || 3} mutuals
+                    {user.batch || user.role} • {getMutualConnectionCount(user.id)} mutual{getMutualConnectionCount(user.id) === 1 ? '' : 's'}
                   </p>
                 </div>
               </div>

@@ -14,6 +14,7 @@ export const NetworkingView: React.FC = () => {
     openMentorshipRequest,
     showToast,
     getConnectionCount,
+    getMutualConnectionCount,
     getConnectionStatus,
     getConnectionUsers,
     openChat
@@ -118,7 +119,7 @@ export const NetworkingView: React.FC = () => {
                     </h3>
                     <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">{person.headline}</p>
                     <span className="text-[10px] text-blue-600 mt-1 font-medium">
-                      {person.mutualConnectionsCount || 3} mutual connections
+                      {getMutualConnectionCount(person.id)} mutual connection{getMutualConnectionCount(person.id) === 1 ? '' : 's'}
                     </span>
                   </div>
 
