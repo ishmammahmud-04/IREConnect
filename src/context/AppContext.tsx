@@ -45,6 +45,7 @@ interface AppContextType {
   getConnectionUsers: (status: 'connected' | 'pending', direction?: 'incoming' | 'outgoing') => User[];
   updateProfileImage: (file: File, type: 'avatar' | 'banner') => Promise<void>;
   updateProfileCV: (file: File) => Promise<void>;
+  deleteProfileCV: () => Promise<void>;
   isUploadingProfileImage: boolean;
   isUploadingCV: boolean;
   
@@ -675,6 +676,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const deleteProfileCV = async () => {
+    if (!currentUser.id) {
+      showToast('Please sign in before deleting your CV.');
+      return;
+    }
+
+    if (!currentUser.cvPath && !currentUser.cvUrl) {
+      showToast('No CV is currently uploaded.');
+      return;
+    }
+
+    try {
+      if (currentUser.cvPath) {
+        await supabase.storage.from('profile-media').remove([currentUser.cvPath]);
+      }
+
+      const { error } = await supabase.from('profiles').update({
+        cv_url: null,
+        cv_path: null,
+        updated_at: new Date().toISOString()
+      }).eq('user_id', currentUser.id);
+
+      if (error) {
+        showToast(`Could not remove CV: ${error.message}`);
+        return;
+      }
+
+      setCurrentUser((previous) => ({ ...previous, cvUrl: undefined, cvPath: undefined }));
+      showToast('CV removed successfully.');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Could not remove this CV.');
+    }
+  };
+
   const markNotificationsAsRead = async () => {
     const { error } = await supabase.from('notifications').update({ is_read: true }).eq('user_id', currentUser.id).eq('is_read', false);
     if (error) {
@@ -829,6 +864,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     getConnectionStatus,
     updateProfileImage,
     updateProfileCV,
+    deleteProfileCV,
     isUploadingProfileImage,
     isUploadingCV,
     globalSearchQuery,

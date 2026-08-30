@@ -14,6 +14,7 @@ export const PrivacySettingsModal: React.FC = () => {
     showToast,
     updateProfileImage,
     updateProfileCV,
+    deleteProfileCV,
     isUploadingProfileImage,
     isUploadingCV
   } = useApp();
@@ -243,9 +244,14 @@ export const PrivacySettingsModal: React.FC = () => {
                 <span className="material-symbols-outlined mr-1 align-middle text-[15px]">upload_file</span>Upload PDF CV
               </button>
               {currentUser.cvUrl && (
-                <a href={currentUser.cvUrl} target="_blank" rel="noreferrer" className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50">
-                  <span className="material-symbols-outlined mr-1 align-middle text-[15px]">visibility</span>View CV
-                </a>
+                <>
+                  <a href={currentUser.cvUrl} target="_blank" rel="noreferrer" className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50">
+                    <span className="material-symbols-outlined mr-1 align-middle text-[15px]">visibility</span>View CV
+                  </a>
+                  <button type="button" onClick={() => void deleteProfileCV()} className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-100">
+                    <span className="material-symbols-outlined mr-1 align-middle text-[15px]">delete</span>Delete CV
+                  </button>
+                </>
               )}
             </div>
             <input ref={cvInputRef} type="file" accept=".pdf,application/pdf" className="hidden" onChange={(event) => void handleCVSelected(event)} />
