@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 
 export const PeopleDirectory: React.FC = () => {
@@ -7,7 +7,9 @@ export const PeopleDirectory: React.FC = () => {
     setSelectedUserForProfile,
     sendConnectionRequest,
     openMentorshipRequest
-    , getConnectionStatus
+    , getConnectionStatus,
+    directorySearchResults,
+    searchDirectoryUsers
   } = useApp();
 
   const [activeSegment, setActiveSegment] = useState<'students' | 'alumni' | 'faculty'>('students');
@@ -16,7 +18,14 @@ export const PeopleDirectory: React.FC = () => {
   const [selectedSkillFilter] = useState('All');
   const [facultyStatusFilter, setFacultyStatusFilter] = useState<'all' | 'current' | 'former'>('all');
 
-  const filteredUsers = (users || []).filter((u) => {
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void searchDirectoryUsers(searchQuery);
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [searchQuery, searchDirectoryUsers]);
+
+  const filteredUsers = (directorySearchResults || users || []).filter((u) => {
     // Segment filter
     if (activeSegment === 'students' && u.role !== 'student') return false;
     if (activeSegment === 'alumni' && u.role !== 'alumni') return false;

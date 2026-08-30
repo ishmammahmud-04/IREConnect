@@ -35,7 +35,18 @@ interface AppContextType {
   opportunities: Opportunity[];
   announcements: Announcement[];
   events: DepartmentEvent[];
+  toggleEventRsvp: (eventId: string) => void;
   notifications: AppNotification[];
+  directorySearchResults: User[] | null;
+  searchDirectoryUsers: (query: string) => Promise<void>;
+  adminVerificationQueue: VerificationRequest[];
+  verificationRequests: VerificationRequest[];
+  approveVerification: (requestId: string) => void;
+  rejectVerification: (requestId: string) => void;
+  flaggedItems: ModerationReport[];
+  moderationReports: ModerationReport[];
+  resolveFlaggedItem: (reportId: string, action: 'dismiss' | 'remove') => void;
+  resolveModerationReport: (reportId: string, action: 'approve' | 'remove') => void;
   connectionRequests: ConnectionRequest[];
   linkedInImports: LinkedInImportItem[];
   savedItemIds: Set<string>;
@@ -168,6 +179,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [events, setEvents] = useState<DepartmentEvent[]>([]);
+  const [directorySearchResults, setDirectorySearchResults] = useState<User[] | null>(null);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [workflowItems, setWorkflowItems] = useState<WorkflowItem[]>([]);
   const [linkedInImports, setLinkedInImports] = useState<LinkedInImportItem[]>([]);
@@ -203,6 +215,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isUploadingCV, setIsUploadingCV] = useState(false);
   const [isChatModalOpen, setIsChatModalOpen] = useState(false);
   const [chatTargetUser, setChatTargetUser] = useState<User | null>(null);
+
+  const toggleEventRsvp = (eventId: string) => {
+    setEvents((prev) => prev.map((event) => {
+      if (event.id !== eventId) return event;
+      const isRsvped = !event.isUserRsvped;
+      const attendeesCount = Math.max(0, (event.attendeesCount ?? event.participantsCount ?? 0) + (isRsvped ? 1 : -1));
+      return { ...event, isUserRsvped: isRsvped, attendeesCount };
+    }));
+    const event = events.find((item) => item.id === eventId);
+    if (event) {
+      showToast(event.isUserRsvped ? `RSVP cancelled for ${event.title}.` : `RSVP confirmed for ${event.title}.`);
+    }
+  };
+
+  const searchDirectoryUsers = async (query: string) => {
+    const normalizedQuery = query.trim();
+    if (!normalizedQuery) {
+      setDirectorySearchResults(null);
+      return;
+    }
+    const pattern = `%${normalizedQuery.replace(/[%_]/g, '\\$&')}%`;
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .or(`full_name.ilike.${pattern},headline.ilike.${pattern},location.ilike.${pattern}`)
+      .order('full_name')
+      .limit(50);
+    if (error) {
+      showToast('Directory search is temporarily unavailable.');
+      return;
+    }
+    setDirectorySearchResults((data || []).map((profile) => profileRowToDirectoryUser(profile as Record<string, unknown>)));
+  };
 
   const tabToPath: Record<MainTab, string> = {
     home: '/',
@@ -247,6 +292,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     () => workflowToConnectionRequests(workflowItems, users, currentUser.id),
     [workflowItems, users, currentUser.id]
   );
+  const verificationRequests = useMemo(
+    () => workflowToVerificationRequests(workflowItems, users),
+    [workflowItems, users]
+  );
+  const moderationReports = useMemo(
+    () => workflowToModerationReports(workflowItems),
+    [workflowItems]
+  );
+  const adminVerificationQueue = verificationRequests;
+  const flaggedItems = moderationReports;
   const networkStats = useMemo(() => ({
     students: 330 + users.filter((user) => user.role === 'student' && isCountedStudent(user)).length,
     alumni: users.filter((user) => user.role === 'alumni').length,
@@ -480,6 +535,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (data?.announcement) setAnnouncements((prev) => [data.announcement as Announcement, ...prev]);
       showToast(`Announcement "${ann.title}" published successfully!`);
     })();
+  };
+
+  const approveVerification = (requestId: string) => {
+    void invokeAdminAction({ action: 'verify_user', workflowId: requestId }, 'Verification approved and badge issued.', 'Could not approve the verification request.');
+  };
+
+  const rejectVerification = (requestId: string) => {
+    void invokeAdminAction({ action: 'reject_verification', workflowId: requestId }, 'Verification request rejected.', 'Could not reject the verification request.');
+  };
+
+  const resolveFlaggedItem = (reportId: string, action: 'dismiss' | 'remove') => {
+    const resolvedAction = action === 'remove' ? 'remove_content' : 'dismiss_report';
+    void invokeAdminAction(
+      { action: resolvedAction, workflowId: reportId },
+      action === 'remove' ? 'Flagged content removed.' : 'Report dismissed.',
+      action === 'remove' ? 'Could not remove the flagged content.' : 'Could not dismiss the report.'
+    );
+  };
+
+  const resolveModerationReport = (reportId: string, action: 'approve' | 'remove') => {
+    const resolvedAction = action === 'remove' ? 'remove_content' : 'dismiss_report';
+    void invokeAdminAction(
+      { action: resolvedAction, workflowId: reportId },
+      action === 'remove' ? 'Moderation report resolved and content removed.' : 'Moderation report approved and closed.',
+      action === 'remove' ? 'Could not resolve the moderation report.' : 'Could not approve the moderation report.'
+    );
   };
 
   const applyLinkedInData = (data: {
@@ -853,7 +934,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     opportunities,
     announcements,
     events,
+    toggleEventRsvp,
     notifications,
+    directorySearchResults,
+    searchDirectoryUsers,
+    adminVerificationQueue,
+    verificationRequests,
+    approveVerification,
+    rejectVerification,
+    flaggedItems,
+    moderationReports,
+    resolveFlaggedItem,
+    resolveModerationReport,
     connectionRequests,
     linkedInImports,
     savedItemIds,
@@ -967,7 +1059,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     opportunities,
     announcements,
     events,
+    toggleEventRsvp,
     notifications,
+    directorySearchResults,
+    searchDirectoryUsers,
+    adminVerificationQueue,
+    verificationRequests,
+    approveVerification,
+    rejectVerification,
+    flaggedItems,
+    moderationReports,
+    resolveFlaggedItem,
+    resolveModerationReport,
     connectionRequests,
     linkedInImports,
     savedItemIds,
@@ -1087,6 +1190,29 @@ const isCountedStudent = (user: User): boolean => {
       (yearMatch && Number(yearMatch[1]) >= 2031)
     );
   });
+};
+
+const profileRowToDirectoryUser = (profile: Record<string, unknown>): User => {
+  const name = typeof profile.full_name === 'string' ? profile.full_name : 'IRE Member';
+  const role = profile.role === 'alumni' || profile.role === 'faculty' || profile.role === 'former_faculty' || profile.role === 'admin' ? profile.role : 'student';
+  const verificationStatus = profile.verification_status === 'Rejected' ? 'Rejected' : role === 'alumni' ? 'Verified Alumni' : role === 'faculty' || role === 'former_faculty' ? 'Verified Faculty' : 'Verified Student';
+  return {
+    id: String(profile.user_id || ''), name, email: '', role, verificationStatus,
+    avatar: typeof profile.avatar_url === 'string' && profile.avatar_url ? profile.avatar_url : `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=2563eb&color=fff`,
+    department: typeof profile.department === 'string' ? profile.department : '',
+    headline: typeof profile.headline === 'string' ? profile.headline : '',
+    bio: typeof profile.bio === 'string' ? profile.bio : '',
+    location: typeof profile.location === 'string' ? profile.location : '',
+    skills: Array.isArray(profile.skills) ? profile.skills.filter((skill): skill is string => typeof skill === 'string') : [],
+    education: Array.isArray(profile.education) ? profile.education as User['education'] : [],
+    experience: Array.isArray(profile.experience) ? profile.experience as User['experience'] : [],
+    externalLinks: typeof profile.external_links === 'object' && profile.external_links ? profile.external_links as User['externalLinks'] : {},
+    privacy: typeof profile.privacy === 'object' && profile.privacy ? profile.privacy as User['privacy'] : { cv: 'private', email: 'private', phone: 'private', experience: 'private', projects: 'private', achievements: 'private', publications: 'private', externalLinks: 'private' },
+    notificationSettings: { connectionRequests: true, acceptedConnections: true, opportunityAlerts: true, deadlineReminders: true, announcements: true, events: true, contentInteractions: true, mentorshipRequests: true },
+    batch: typeof profile.batch === 'string' ? profile.batch : undefined,
+    studentId: typeof profile.student_id === 'string' ? profile.student_id : undefined,
+    isAvailableForMentorship: Boolean(profile.is_available_for_mentorship)
+  };
 };
 
 const workflowToConnectionRequests = (items: WorkflowItem[], users: User[], currentUserId: string): ConnectionRequest[] => items

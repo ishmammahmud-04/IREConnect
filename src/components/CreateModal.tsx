@@ -164,7 +164,7 @@ export const CreateModal: React.FC = () => {
         mediaGallery: coverImage ? [coverImage] : [],
         relatedAchievements: [],
         relatedPublications: [],
-        status: 'Ongoing',
+        status: 'Ongoing' as const,
         likesCount: 0
       };
       if (createModalEditingItem) {
@@ -179,8 +179,8 @@ export const CreateModal: React.FC = () => {
         authors: [currentUser.name],
         journal: secondaryField || 'Publication venue',
         doi: publicationUrl.trim() || 'Pending DOI',
-        publicationType: 'Journal',
-        status: 'Published',
+        publicationType: 'Journal' as const,
+        status: 'Published' as const,
         abstract: desc,
         keywords: tagArray.length ? tagArray : ['Robotics', 'Autonomy'],
         date: new Date().toISOString().slice(0, 10),

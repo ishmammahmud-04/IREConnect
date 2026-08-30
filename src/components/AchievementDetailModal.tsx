@@ -9,12 +9,25 @@ export const AchievementDetailModal: React.FC = () => {
     projects,
     toggleSaveItem,
     isItemSaved,
-    showToast
+    showToast,
+    currentUser,
+    deletePublishedContent,
+    setCreateModalEditingItem,
+    setIsCreateModalOpen
   } = useApp();
 
   if (!selectedAchievement) return null;
 
   const isSaved = isItemSaved(selectedAchievement.id);
+  const canManage = selectedAchievement.ownerId === currentUser.id;
+  const handleDelete = async () => {
+    if (await deletePublishedContent('achievement', selectedAchievement.id)) setSelectedAchievement(null);
+  };
+  const handleEdit = () => {
+    setCreateModalEditingItem({ type: 'achievement', item: selectedAchievement });
+    setIsCreateModalOpen(true);
+    setSelectedAchievement(null);
+  };
   const relatedProject = projects.find((p) => p.id === selectedAchievement.relatedProjectId);
 
   const handleShare = () => {
@@ -58,6 +71,12 @@ export const AchievementDetailModal: React.FC = () => {
             >
               <span className="material-symbols-outlined text-[18px]">close</span>
             </button>
+            {canManage && (
+              <>
+                <button onClick={handleEdit} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors" title="Edit achievement"><span className="material-symbols-outlined text-[18px]">edit</span></button>
+                <button onClick={() => void handleDelete()} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 transition-colors" title="Delete achievement"><span className="material-symbols-outlined text-[18px]">delete</span></button>
+              </>
+            )}
           </div>
         </div>
 

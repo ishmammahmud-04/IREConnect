@@ -28,6 +28,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
 
   const user = userOverride || currentUser;
   const isOwnProfile = user.id === currentUser.id;
+  const isConnected = getConnectionStatus(user.id) === 'connected';
+  const canView = (visibility: User['privacy'][keyof User['privacy']]) =>
+    isOwnProfile || visibility === 'public' || (visibility === 'department' && user.department === currentUser.department) || (visibility === 'connections' && isConnected);
+  const canViewExperience = canView(user.privacy?.experience || 'private');
+  const canViewProjects = canView(user.privacy?.projects || 'private');
+  const canViewAchievements = canView(user.privacy?.achievements || 'private');
+  const canViewCv = canView(user.privacy?.cv || 'private');
+  const canViewExternalLinks = canView(user.privacy?.externalLinks || 'private');
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -316,7 +324,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
                 </div>
               ))}
 
-              {(user.experience || []).map((exp) => (
+              {canViewExperience && (user.experience || []).map((exp) => (
                 <div key={exp.id} className="pt-2.5 first:pt-0">
                   <h3 className="font-bold text-xs text-slate-900">{exp.position}</h3>
                   <p className="text-xs text-blue-600 font-medium">{exp.organization}</p>
@@ -340,7 +348,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
               Verified PDF resume containing academic history, research projects, and skills.
             </p>
             <div className="flex flex-col gap-1.5 pt-1">
-              {user.cvUrl ? (
+              {canViewCv && user.cvUrl ? (
                 <>
                   <a
                     href={user.cvUrl}
@@ -360,9 +368,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
                     <span>Download Resume</span>
                   </a>
                 </>
-              ) : (
+              ) : canViewCv ? (
                 <div className="text-[11px] text-slate-500 rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-center">
                   No CV uploaded yet.
+                </div>
+              ) : (
+                <div className="text-[11px] text-slate-500 rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-center">
+                  CV is private.
                 </div>
               )}
             </div>
@@ -393,7 +405,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
               <span>Connected Links</span>
             </h2>
             <div className="space-y-1.5 text-xs">
-              {user.externalLinks?.linkedin && (
+              {canViewExternalLinks && user.externalLinks?.linkedin && (
                 <a
                   href={`https://${user.externalLinks.linkedin}`}
                   target="_blank"
@@ -406,7 +418,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
                   <span className="material-symbols-outlined text-[14px] text-slate-400">open_in_new</span>
                 </a>
               )}
-              {user.externalLinks?.github && (
+              {canViewExternalLinks && user.externalLinks?.github && (
                 <a
                   href={`https://${user.externalLinks.github}`}
                   target="_blank"
@@ -419,7 +431,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
                   <span className="material-symbols-outlined text-[14px] text-slate-400">open_in_new</span>
                 </a>
               )}
-              {user.externalLinks?.googleScholar && (
+              {canViewExternalLinks && user.externalLinks?.googleScholar && (
                 <a
                   href={`https://${user.externalLinks.googleScholar}`}
                   target="_blank"
@@ -432,7 +444,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
                   <span className="material-symbols-outlined text-[14px] text-slate-400">open_in_new</span>
                 </a>
               )}
-              {user.externalLinks?.orcid && (
+              {canViewExternalLinks && user.externalLinks?.orcid && (
                 <a
                   href={`https://orcid.org/${user.externalLinks.orcid}`}
                   target="_blank"
@@ -451,7 +463,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
       </div>
 
       {/* Projects Showcase on Profile */}
-      {userProjects.length > 0 && (
+      {canViewProjects && userProjects.length > 0 && (
         <section className="bg-white rounded-xl border border-slate-200 p-5 shadow-2xs space-y-3">
           <h2 className="font-heading text-sm font-bold text-slate-900 flex items-center justify-between">
             <span>Showcased Projects ({userProjects.length})</span>
@@ -495,7 +507,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
       )}
 
       {/* Achievements on Profile */}
-      {userAchievements.length > 0 && (
+      {canViewAchievements && userAchievements.length > 0 && (
         <section className="bg-white rounded-xl border border-slate-200 p-5 shadow-2xs space-y-3">
           <h2 className="font-heading text-sm font-bold text-slate-900">
             Achievements &amp; Honors ({userAchievements.length})

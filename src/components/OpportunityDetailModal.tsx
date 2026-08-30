@@ -8,7 +8,10 @@ export const OpportunityDetailModal: React.FC = () => {
     toggleSaveItem,
     isItemSaved,
     currentUser,
-    showToast
+    showToast,
+    deletePublishedContent,
+    setCreateModalEditingItem,
+    setIsCreateModalOpen
   } = useApp();
 
   const [coverNote, setCoverNote] = useState('');
@@ -17,6 +20,15 @@ export const OpportunityDetailModal: React.FC = () => {
   if (!selectedOpportunity) return null;
 
   const isSaved = isItemSaved(selectedOpportunity.id);
+  const canManage = selectedOpportunity.ownerId === currentUser.id;
+  const handleDelete = async () => {
+    if (await deletePublishedContent('opportunity', selectedOpportunity.id)) setSelectedOpportunity(null);
+  };
+  const handleEdit = () => {
+    setCreateModalEditingItem({ type: 'opportunity', item: selectedOpportunity });
+    setIsCreateModalOpen(true);
+    setSelectedOpportunity(null);
+  };
 
   const handleApply = (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,6 +66,12 @@ export const OpportunityDetailModal: React.FC = () => {
             >
               <span className="material-symbols-outlined text-[18px]">close</span>
             </button>
+            {canManage && (
+              <>
+                <button onClick={handleEdit} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors" title="Edit opportunity"><span className="material-symbols-outlined text-[18px]">edit</span></button>
+                <button onClick={() => void handleDelete()} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 transition-colors" title="Delete opportunity"><span className="material-symbols-outlined text-[18px]">delete</span></button>
+              </>
+            )}
           </div>
         </div>
 
@@ -99,7 +117,7 @@ export const OpportunityDetailModal: React.FC = () => {
           <section className="space-y-1.5">
             <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider font-mono">Required Skills &amp; Competencies</h2>
             <div className="flex flex-wrap gap-1.5">
-              {(selectedOpportunity.skillsRequired || []).map((skill) => (
+              {(selectedOpportunity.requiredSkills || []).map((skill) => (
                 <span
                   key={skill}
                   className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-bold border border-blue-200/60 font-mono"

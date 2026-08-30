@@ -2,11 +2,20 @@ import React from 'react';
 import { useApp } from '../context/AppContext';
 
 export const ArticleDetailModal: React.FC = () => {
-  const { selectedArticle, setSelectedArticle, toggleSaveItem, isItemSaved, showToast } = useApp();
+  const { selectedArticle, setSelectedArticle, toggleSaveItem, isItemSaved, showToast, currentUser, deletePublishedContent, setCreateModalEditingItem, setIsCreateModalOpen } = useApp();
 
   if (!selectedArticle) return null;
 
   const isSaved = isItemSaved(selectedArticle.id);
+  const canManage = selectedArticle.ownerId === currentUser.id;
+  const handleDelete = async () => {
+    if (await deletePublishedContent('article', selectedArticle.id)) setSelectedArticle(null);
+  };
+  const handleEdit = () => {
+    setCreateModalEditingItem({ type: 'article', item: selectedArticle });
+    setIsCreateModalOpen(true);
+    setSelectedArticle(null);
+  };
 
   const handleShare = () => {
     navigator.clipboard?.writeText(window.location.href);
@@ -45,6 +54,12 @@ export const ArticleDetailModal: React.FC = () => {
             >
               <span className="material-symbols-outlined text-[18px]">share</span>
             </button>
+            {canManage && (
+              <>
+                <button onClick={handleEdit} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors" title="Edit article"><span className="material-symbols-outlined text-[18px]">edit</span></button>
+                <button onClick={() => void handleDelete()} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 transition-colors" title="Delete article"><span className="material-symbols-outlined text-[18px]">delete</span></button>
+              </>
+            )}
             <button
               onClick={() => setSelectedArticle(null)}
               className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors"

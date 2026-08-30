@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
-type AuthMode = 'login' | 'register' | 'confirmation';
+type AuthMode = 'login' | 'register' | 'confirmation' | 'forgot' | 'recovery';
 
 export const AuthScreen: React.FC = () => {
   const [mode, setMode] = useState<AuthMode>('login');
@@ -11,6 +11,7 @@ export const AuthScreen: React.FC = () => {
   const [role, setRole] = useState<'student' | 'alumni' | 'faculty'>('student');
   const [batch, setBatch] = useState('');
   const [studentId, setStudentId] = useState('');
+  const [hasAcceptedPolicies, setHasAcceptedPolicies] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,6 +20,7 @@ export const AuthScreen: React.FC = () => {
     const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
     const code = params.get('code');
     const tokenHash = params.get('token_hash');
+    const isRecovery = params.get('type') === 'recovery' || hash.get('type') === 'recovery';
     const hasAuthCallback = Boolean(code || tokenHash || hash.get('access_token') || hash.get('refresh_token'));
 
     if (!hasAuthCallback) return;
@@ -33,7 +35,9 @@ export const AuthScreen: React.FC = () => {
         }
       } catch (callbackError) {
         console.error('Auth callback failed:', callbackError);
+        if (isRecovery) setMode('recovery');
       } finally {
+        if (isRecovery) return;
         window.history.replaceState({}, '', window.location.pathname);
       }
     };
@@ -42,6 +46,38 @@ export const AuthScreen: React.FC = () => {
   }, []);
 
   const resetStatus = () => setError(null);
+
+  const requestPasswordReset = async () => {
+    setError(null);
+    if (!isUftbEmail(email)) {
+      setError('Only UFTB email addresses can access this network.');
+      return;
+    }
+    setIsSubmitting(true);
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+    setIsSubmitting(false);
+    if (resetError) {
+      setError(resetError.message);
+      return;
+    }
+    setMode('confirmation');
+  };
+
+  const updatePassword = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError(null);
+    setIsSubmitting(true);
+    const { error: updateError } = await supabase.auth.updateUser({ password });
+    setIsSubmitting(false);
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
+    await supabase.auth.signOut();
+    window.history.replaceState({}, '', window.location.pathname);
+    setPassword('');
+    setMode('login');
+  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -65,7 +101,7 @@ export const AuthScreen: React.FC = () => {
         email,
         password,
         options: {
-          data: { full_name: name, role, batch: batch.trim(), student_id: studentId.trim() },
+          data: { full_name: name, role, batch: batch.trim(), student_id: studentId.trim(), terms_accepted: true, privacy_policy_accepted: true },
           emailRedirectTo: window.location.origin
         }
       });
@@ -112,6 +148,47 @@ export const AuthScreen: React.FC = () => {
     );
   }
 
+  if (mode === 'recovery') {
+    return (
+      <AuthLayout>
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-600">IRE Department Network</p>
+        <h1 className="mt-2 font-heading text-2xl font-bold text-slate-900">Set a new password</h1>
+        <p className="mt-2 text-sm text-slate-600">Choose a new password for your IREConnect account.</p>
+        <form className="mt-6 space-y-4" onSubmit={updatePassword}>
+          <label className="block text-xs font-bold text-slate-700">New password
+            <input required minLength={6} type="password" autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="At least 6 characters" />
+          </label>
+          {error && <p className="rounded-lg bg-red-50 p-3 text-xs text-red-700">{error}</p>}
+          <button disabled={isSubmitting} className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60">
+            {isSubmitting ? 'Updating…' : 'Update password'}
+          </button>
+        </form>
+      </AuthLayout>
+    );
+  }
+
+  if (mode === 'forgot') {
+    return (
+      <AuthLayout>
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-600">IRE Department Network</p>
+        <h1 className="mt-2 font-heading text-2xl font-bold text-slate-900">Reset your password</h1>
+        <p className="mt-2 text-sm text-slate-600">Enter your university email and we will send you a secure reset link.</p>
+        <form className="mt-6 space-y-4" onSubmit={(event) => { event.preventDefault(); void requestPasswordReset(); }}>
+          <label className="block text-xs font-bold text-slate-700">University email
+            <input required type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="your.name@uftb.ac.bd" />
+          </label>
+          {error && <p className="rounded-lg bg-red-50 p-3 text-xs text-red-700">{error}</p>}
+          <button disabled={isSubmitting} className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60">
+            {isSubmitting ? 'Sending…' : 'Send reset link'}
+          </button>
+        </form>
+        <button type="button" onClick={() => { resetStatus(); setMode('login'); }} className="mt-3 w-full py-2 text-sm font-semibold text-slate-600 hover:text-slate-900">
+          Back to sign in
+        </button>
+      </AuthLayout>
+    );
+  }
+
   const isRegister = mode === 'register';
   return (
     <AuthLayout>
@@ -146,7 +223,18 @@ export const AuthScreen: React.FC = () => {
         <label className="block text-xs font-bold text-slate-700">Password
           <input required minLength={6} type="password" autoComplete={isRegister ? 'new-password' : 'current-password'} value={password} onChange={(event) => setPassword(event.target.value)} className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="At least 6 characters" />
         </label>
+        {isRegister && (
+          <label className="flex items-start gap-2 text-xs leading-relaxed text-slate-600">
+            <input required type="checkbox" checked={hasAcceptedPolicies} onChange={(event) => setHasAcceptedPolicies(event.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-blue-600" />
+            <span>I agree to the IREConnect Terms of Service and Privacy Policy.</span>
+          </label>
+        )}
         {error && <p className="rounded-lg bg-red-50 p-3 text-xs text-red-700">{error}</p>}
+        {!isRegister && (
+          <button type="button" onClick={() => { resetStatus(); setMode('forgot'); }} className="w-full text-right text-xs font-semibold text-blue-600 hover:text-blue-700">
+            Forgot password?
+          </button>
+        )}
         <button disabled={isSubmitting} className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60">
           {isSubmitting ? 'Please wait…' : isRegister ? 'Create account' : 'Sign in'}
         </button>

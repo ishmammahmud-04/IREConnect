@@ -94,7 +94,7 @@ const MainContent: React.FC = () => {
     syncCurrentTabFromPath,
   } = useApp();
   const routeGuardRef = useRef(false);
-  const [lastNonProfileTab, setLastNonProfileTab] = useState<'home' | 'discover' | 'network' | 'opportunities' | 'department' | 'profile'>('home');
+  const [lastNonProfileTab, setLastNonProfileTab] = useState<'home' | 'discover' | 'network' | 'opportunities' | 'department' | 'profile' | 'admin'>('home');
 
   useEffect(() => {
     if (currentTab !== 'profile' && !window.location.pathname.startsWith('/profile/')) {
@@ -223,7 +223,8 @@ const MainContent: React.FC = () => {
       network: '/network',
       opportunities: '/opportunities',
       department: '/department',
-      profile: '/profile'
+      profile: '/profile',
+      admin: '/admin'
     };
 
     // If a user profile is selected from any screen, show that user's profile
@@ -383,7 +384,9 @@ const AuthGate: React.FC = () => {
   }, [session, hydrateNotifications, hydrateWorkflows]);
 
   if (isLoading) return <main className="flex min-h-screen items-center justify-center bg-slate-100 text-sm font-semibold text-slate-600">Loading IRE Network…</main>;
-  if (!session) return <AuthScreen />;
+  const isPasswordRecovery = new URLSearchParams(window.location.search).get('type') === 'recovery'
+    || new URLSearchParams(window.location.hash.replace(/^#/, '')).get('type') === 'recovery';
+  if (!session || isPasswordRecovery) return <AuthScreen />;
   return <MainContent />;
 };
 
@@ -435,7 +438,7 @@ const notificationRowToAppNotification = (notification: Record<string, unknown>)
     || notification.notification_type === 'announcement'
     || notification.notification_type === 'event'
     || notification.notification_type === 'message'
-    ? String(notification.notification_type)
+    ? notification.notification_type as AppNotification['type']
     : 'verification',
   destination: notification.notification_type === 'connection' || notification.notification_type === 'mentorship' || notification.notification_type === 'message'
     ? 'network'
