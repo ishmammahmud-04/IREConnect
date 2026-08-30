@@ -103,7 +103,10 @@ const MainContent: React.FC = () => {
 
       if (userId) {
         const nextUser = users.find((user) => user.id === userId) || null;
-        setSelectedUserForProfile((previous) => previous?.id === nextUser?.id ? previous : nextUser);
+        const isSameUser = selectedUserForProfile?.id === nextUser?.id;
+        if (!isSameUser) {
+          setSelectedUserForProfile(nextUser);
+        }
         setSelectedProject(null);
         setSelectedPublication(null);
         setSelectedAchievement(null);
@@ -118,7 +121,9 @@ const MainContent: React.FC = () => {
       const nextArticle = articleId ? articles.find((article) => article.id === articleId) || null : null;
       const nextOpportunity = opportunityId ? opportunities.find((opportunity) => opportunity.id === opportunityId) || null : null;
 
-      setSelectedUserForProfile(null);
+      if (selectedUserForProfile && !window.location.pathname.startsWith('/profile/')) {
+        setSelectedUserForProfile(null);
+      }
       setSelectedProject(nextProject);
       setSelectedPublication(nextPublication);
       setSelectedAchievement(nextAchievement);
@@ -129,14 +134,15 @@ const MainContent: React.FC = () => {
     syncFromLocation();
     window.addEventListener('popstate', syncFromLocation);
     return () => window.removeEventListener('popstate', syncFromLocation);
-  }, [users, projects, publications, achievements, articles, opportunities, setSelectedUserForProfile, setSelectedProject, setSelectedPublication, setSelectedAchievement, setSelectedOpportunity, setSelectedArticle, syncCurrentTabFromPath]);
+  }, [users, projects, publications, achievements, articles, opportunities, selectedUserForProfile, setSelectedUserForProfile, setSelectedProject, setSelectedPublication, setSelectedAchievement, setSelectedOpportunity, setSelectedArticle, syncCurrentTabFromPath]);
 
   useEffect(() => {
     if (routeGuardRef.current) return;
 
     if (selectedUserForProfile) {
       const nextPath = `/profile/${selectedUserForProfile.id}`;
-      if (window.location.pathname !== nextPath && !window.location.pathname.startsWith('/profile/')) {
+      const isAlreadyOnTarget = window.location.pathname === nextPath || window.location.pathname.startsWith(`${nextPath}/`);
+      if (!isAlreadyOnTarget && !window.location.pathname.startsWith('/profile/')) {
         routeGuardRef.current = true;
         window.history.replaceState({ profileId: selectedUserForProfile.id }, '', nextPath);
         routeGuardRef.current = false;
@@ -214,9 +220,11 @@ const MainContent: React.FC = () => {
           userOverride={selectedUserForProfile}
           onBack={() => {
             setSelectedUserForProfile(null);
-            if (window.history.length > 1) {
-              window.history.back();
-            }
+            const fallbackPath = currentTab === 'profile' ? '/profile' : currentTab === 'discover' ? '/discover' : currentTab === 'opportunities' ? '/opportunities' : currentTab === 'network' ? '/network' : currentTab === 'department' ? '/department' : '/';
+            routeGuardRef.current = true;
+            window.history.replaceState({}, '', fallbackPath);
+            routeGuardRef.current = false;
+            syncCurrentTabFromPath(fallbackPath);
           }}
         />
       );
