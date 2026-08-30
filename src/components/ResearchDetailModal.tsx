@@ -1,5 +1,6 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
+import { MediaViewer } from './MediaViewer';
 
 export const ResearchDetailModal: React.FC = () => {
   const {
@@ -27,18 +28,6 @@ export const ResearchDetailModal: React.FC = () => {
    } catch {
      showToast('Share text ready to copy: ' + shareText);
    }
- };
-
- const copyBibtex = () => {
-   const bib = `@article{${selectedPublication.authors[0].split(' ')[1].toLowerCase()}2026edge,
- title={${selectedPublication.title}},
- author={${selectedPublication.authors.join(' and ')}},
- journal={${selectedPublication.journal}},
- year={2026},
- doi={${selectedPublication.doi}}
-}`;
-   navigator.clipboard?.writeText(bib);
-   showToast('BibTeX citation copied to clipboard!');
  };
 
  const handleDelete = async () => {
@@ -106,7 +95,6 @@ export const ResearchDetailModal: React.FC = () => {
               <span><strong>Journal:</strong> {selectedPublication.journal}</span>
               <span><strong>DOI:</strong> <a href={`https://doi.org/${selectedPublication.doi}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">{selectedPublication.doi}</a></span>
               <span><strong>Date:</strong> {selectedPublication.date}</span>
-              <span><strong>Citations:</strong> {selectedPublication.citations || 42}</span>
             </div>
           </div>
 
@@ -141,21 +129,15 @@ export const ResearchDetailModal: React.FC = () => {
                 Open publication link
               </a>
             )}
-            <button
-              onClick={() => showToast('Opening IEEE publication full text reader...')}
-              className="px-4 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-all flex items-center gap-1.5 shadow-2xs"
-            >
+            {selectedPublication.pdfUrl && <a href={selectedPublication.pdfUrl} target="_blank" rel="noreferrer" className="px-4 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-all flex items-center gap-1.5 shadow-2xs">
               <span className="material-symbols-outlined text-[16px]">menu_book</span>
               <span>Read Full Paper</span>
-            </button>
+            </a>}
 
-            <button
-              onClick={() => showToast('Downloading PDF manuscript...')}
-              className="px-4 py-1.5 rounded-lg border border-slate-300 text-slate-800 text-xs font-bold hover:bg-slate-50 transition-all flex items-center gap-1.5 shadow-2xs"
-            >
+            {selectedPublication.pdfUrl && <a href={selectedPublication.pdfUrl} download={`${selectedPublication.title}.pdf`} className="px-4 py-1.5 rounded-lg border border-slate-300 text-slate-800 text-xs font-bold hover:bg-slate-50 transition-all flex items-center gap-1.5 shadow-2xs">
               <span className="material-symbols-outlined text-[16px]">download</span>
               <span>Download PDF</span>
-            </button>
+            </a>}
 
             <button
               onClick={handleShare}
@@ -163,14 +145,6 @@ export const ResearchDetailModal: React.FC = () => {
             >
               <span className="material-symbols-outlined text-[16px]">share</span>
               <span>Share</span>
-            </button>
-
-            <button
-              onClick={copyBibtex}
-              className="px-3.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-xs font-medium hover:bg-slate-50 transition-all flex items-center gap-1.5"
-            >
-              <span className="material-symbols-outlined text-[16px]">format_quote</span>
-              <span>Copy BibTeX</span>
             </button>
 
             {canManage && (

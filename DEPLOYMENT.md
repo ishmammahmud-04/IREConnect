@@ -21,6 +21,18 @@ npm install
 npm run build
 ```
 
+### Password reset email
+
+In Supabase Dashboard > Authentication > URL Configuration, set the Site URL to
+the deployed Vercel origin and add that same origin with a trailing slash to the
+Redirect URLs, for example `https://ireconnect.vercel.app/`. The reset flow uses
+that URL after the user chooses a new password.
+
+For production delivery, configure a custom SMTP provider under Authentication
+> SMTP Settings. The default Supabase email service is rate-limited and is not
+intended for reliable production mail delivery. Also check the provider's spam
+folder and its delivery logs when testing.
+
 Serve the built app over HTTPS in production. Camera access requires HTTPS or `localhost`.
 
 ## Security tests

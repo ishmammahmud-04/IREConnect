@@ -40,6 +40,7 @@ export const CreateModal: React.FC = () => {
   const [secondaryField, setSecondaryField] = useState('');
   const [publicationUrl, setPublicationUrl] = useState('');
   const [coverImage, setCoverImage] = useState('');
+  const [pdfUrl, setPdfUrl] = useState('');
   const [supervisorName, setSupervisorName] = useState('');
   const [teamMembersText, setTeamMembersText] = useState('');
 
@@ -51,6 +52,7 @@ export const CreateModal: React.FC = () => {
     setSecondaryField('');
     setPublicationUrl('');
     setCoverImage('');
+    setPdfUrl('');
     setSupervisorName('');
     setTeamMembersText('');
   };
@@ -67,6 +69,7 @@ export const CreateModal: React.FC = () => {
       setSecondaryField(item.journal || item.organization || item.conference || '');
       setPublicationUrl(item.externalUrl || item.applicationUrl || item.certificateUrl || '');
       setCoverImage(item.coverImage || item.image || '');
+      setPdfUrl(item.pdfUrl || item.docUrl || item.certificateUrl || '');
       setSupervisorName(item.supervisor?.name || '');
       setTeamMembersText((item.teamMembers || []).map((member: any) => `${member.name}${member.role ? ` - ${member.role}` : ''}`).join('\n') || '');
       return;
@@ -112,6 +115,26 @@ export const CreateModal: React.FC = () => {
     }
   };
 
+  const handlePdfInput = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      showToast('Only PDF files are allowed.');
+      event.target.value = '';
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      showToast('PDF files must be 10 MB or smaller.');
+      event.target.value = '';
+      return;
+    }
+    try {
+      setPdfUrl(await fileToDataUrl(file));
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Could not load the selected PDF.');
+    }
+  };
+
   const closeModal = () => {
     setIsCreateModalOpen(false);
     setCreateModalEditingItem(null);
@@ -133,6 +156,7 @@ export const CreateModal: React.FC = () => {
       id: createModalEditingItem?.item?.id || `${contentType}-${Date.now()}`,
       title,
       coverImage: coverImage || '',
+      pdfUrl: pdfUrl || undefined,
       ownerId: currentUser.id
     };
 
@@ -187,7 +211,6 @@ export const CreateModal: React.FC = () => {
         researchArea: category || 'Research',
         externalUrl: publicationUrl.trim() || undefined,
         coverImage: coverImage || '',
-        citations: 0,
         visibility: 'public' as const
       };
       if (createModalEditingItem) {
@@ -358,6 +381,12 @@ export const CreateModal: React.FC = () => {
             <label className="block text-xs font-bold text-slate-800 mb-1">Cover photo</label>
             <input type="file" accept="image/jpeg,image/png,image/webp,image/bmp" onChange={handleImageInput} className="w-full text-xs text-slate-700 file:mr-2 file:py-1.5 file:px-2 file:rounded file:border file:border-slate-200 file:bg-slate-100 file:text-slate-700" />
             {coverImage && <img src={coverImage} alt="Selected cover" className="mt-2 h-20 w-full object-cover rounded-lg border border-slate-200" />}
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-800 mb-1">Attach PDF</label>
+            <input type="file" accept="application/pdf,.pdf" onChange={handlePdfInput} className="w-full text-xs text-slate-700 file:mr-2 file:rounded file:border file:border-slate-200 file:bg-slate-100 file:px-2 file:py-1.5 file:text-slate-700" />
+            {pdfUrl && <p className="mt-1 text-[10px] font-semibold text-emerald-600">PDF attached and ready to read or download.</p>}
           </div>
 
           <div>

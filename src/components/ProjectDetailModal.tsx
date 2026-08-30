@@ -1,5 +1,6 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
+import { MediaViewer } from './MediaViewer';
 
 export const ProjectDetailModal: React.FC = () => {
   const {
@@ -110,11 +111,7 @@ export const ProjectDetailModal: React.FC = () => {
 
         {/* Hero Cover */}
         <div className="w-full aspect-[21/8] bg-slate-100 overflow-hidden relative">
-          <img
-            src={selectedProject.coverImage}
-            alt={selectedProject.title}
-            className="w-full h-full object-cover"
-          />
+          <MediaViewer src={selectedProject.coverImage} alt={selectedProject.title} />
         </div>
 
         {/* Content Details */}
@@ -169,6 +166,18 @@ export const ProjectDetailModal: React.FC = () => {
                   <span>Technical Documentation</span>
                 </a>
               )}
+              {selectedProject.pdfUrl && (
+                <>
+                  <a href={selectedProject.pdfUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white hover:bg-slate-800">
+                    <span className="material-symbols-outlined text-[16px]">menu_book</span>
+                    <span>Read PDF</span>
+                  </a>
+                  <a href={selectedProject.pdfUrl} download={`${selectedProject.title}.pdf`} className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50">
+                    <span className="material-symbols-outlined text-[16px]">download</span>
+                    <span>Download PDF</span>
+                  </a>
+                </>
+              )}
             </div>
           </div>
 
@@ -210,7 +219,7 @@ export const ProjectDetailModal: React.FC = () => {
                   <div className="grid grid-cols-2 gap-2.5">
                     {(selectedProject.mediaGallery || []).map((img, i) => (
                       <div key={i} className="aspect-video rounded-lg overflow-hidden bg-slate-100 border border-slate-200">
-                        <img src={img} alt={`Media ${i}`} className="w-full h-full object-cover hover:scale-105 transition-transform" />
+                        <MediaViewer src={img} alt={`Media ${i}`} />
                       </div>
                     ))}
                   </div>

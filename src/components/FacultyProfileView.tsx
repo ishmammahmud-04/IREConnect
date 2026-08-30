@@ -234,8 +234,6 @@ export const FacultyProfileView: React.FC<FacultyProfileViewProps> = ({ facultyU
                     <span>{pub.journal}</span>
                     <span>•</span>
                     <span>{pub.date}</span>
-                    <span>•</span>
-                    <span>{pub.citations || 42} Citations</span>
                   </div>
                 </div>
               ))}

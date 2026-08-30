@@ -49,17 +49,19 @@ export const AuthScreen: React.FC = () => {
 
   const requestPasswordReset = async () => {
     setError(null);
-    if (!isUftbEmail(email)) {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!isUftbEmail(normalizedEmail)) {
       setError('Only UFTB email addresses can access this network.');
       return;
     }
     setIsSubmitting(true);
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(normalizedEmail, { redirectTo: `${window.location.origin}/` });
     setIsSubmitting(false);
     if (resetError) {
       setError(resetError.message);
       return;
     }
+    setEmail(normalizedEmail);
     setMode('confirmation');
   };
 

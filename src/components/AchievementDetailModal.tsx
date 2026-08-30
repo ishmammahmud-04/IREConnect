@@ -1,5 +1,6 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
+import { MediaViewer } from './MediaViewer';
 
 export const AchievementDetailModal: React.FC = () => {
   const {
@@ -83,11 +84,7 @@ export const AchievementDetailModal: React.FC = () => {
         {/* Hero Image Area */}
         {selectedAchievement.image && (
           <div className="w-full aspect-[21/8] bg-slate-100 overflow-hidden relative">
-            <img
-              src={selectedAchievement.image}
-              alt={selectedAchievement.title}
-              className="w-full h-full object-cover"
-            />
+            <MediaViewer src={selectedAchievement.image} alt={selectedAchievement.title} />
           </div>
         )}
 
@@ -95,6 +92,12 @@ export const AchievementDetailModal: React.FC = () => {
         <div className="p-5 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-5">
           {/* Left Column: Core Narrative */}
           <div className="lg:col-span-8 space-y-4">
+            {selectedAchievement.pdfUrl && (
+              <div className="flex flex-wrap gap-2">
+                <a href={selectedAchievement.pdfUrl} target="_blank" rel="noreferrer" className="rounded-lg bg-slate-900 px-4 py-1.5 text-xs font-bold text-white">Read Attached PDF</a>
+                <a href={selectedAchievement.pdfUrl} download={`${selectedAchievement.title}.pdf`} className="rounded-lg border border-slate-200 px-4 py-1.5 text-xs font-bold text-slate-700">Download PDF</a>
+              </div>
+            )}
             <div className="space-y-1.5">
               <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
                 <span className="inline-flex items-center gap-1 text-amber-600 font-bold">

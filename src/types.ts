@@ -122,6 +122,7 @@ export interface Project {
   githubUrl?: string;
   demoUrl?: string;
   docUrl?: string;
+  pdfUrl?: string;
   mediaGallery?: string[];
   relatedAchievements?: { id: string; title: string; category: string }[];
   relatedPublications?: { id: string; title: string; journal: string }[];
@@ -150,7 +151,6 @@ export interface Publication {
   orcid?: string;
   status: PublicationStatus;
   coverImage?: string;
-  citations?: number;
   visibility: VisibilityLevel;
   relatedProjectId?: string;
 }
@@ -168,6 +168,7 @@ export interface Achievement {
   description: string;
   image?: string;
   certificateUrl?: string;
+  pdfUrl?: string;
   verificationUrl?: string;
   isVerified: boolean;
   relatedProjectId?: string;
@@ -192,6 +193,7 @@ export interface Article {
   relatedProjectId?: string;
   relatedResearchId?: string;
   views?: number;
+  pdfUrl?: string;
 }
 
 export interface Opportunity {
@@ -208,6 +210,7 @@ export interface Opportunity {
   deadline: string;
   applicationUrl?: string;
   contactEmail?: string;
+  pdfUrl?: string;
   postedBy: { name: string; role: string; avatar: string };
   isRecommended?: boolean;
 }

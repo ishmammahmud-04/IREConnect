@@ -1,5 +1,6 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
+import { MediaViewer } from './MediaViewer';
 
 export const ArticleDetailModal: React.FC = () => {
   const { selectedArticle, setSelectedArticle, toggleSaveItem, isItemSaved, showToast, currentUser, deletePublishedContent, setCreateModalEditingItem, setIsCreateModalOpen } = useApp();
@@ -72,11 +73,7 @@ export const ArticleDetailModal: React.FC = () => {
 
         {/* Hero Cover Image */}
         <div className="w-full aspect-[21/8] bg-slate-100 overflow-hidden relative">
-          <img
-            src={selectedArticle.coverImage}
-            alt={selectedArticle.title}
-            className="w-full h-full object-cover"
-          />
+          <MediaViewer src={selectedArticle.coverImage} alt={selectedArticle.title} />
         </div>
 
         {/* Content Body */}
@@ -172,6 +169,10 @@ def scan_callback(msg):
               </span>
             ))}
           </div>
+          {selectedArticle.pdfUrl && <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-4">
+            <a href={selectedArticle.pdfUrl} target="_blank" rel="noreferrer" className="rounded-lg bg-slate-900 px-4 py-1.5 text-xs font-bold text-white">Read Full Article PDF</a>
+            <a href={selectedArticle.pdfUrl} download={`${selectedArticle.title}.pdf`} className="rounded-lg border border-slate-200 px-4 py-1.5 text-xs font-bold text-slate-700">Download PDF</a>
+          </div>}
         </div>
       </div>
     </div>

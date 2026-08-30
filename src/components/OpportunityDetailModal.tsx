@@ -128,6 +128,11 @@ export const OpportunityDetailModal: React.FC = () => {
             </div>
           </section>
 
+          {selectedOpportunity.pdfUrl && <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-3">
+            <a href={selectedOpportunity.pdfUrl} target="_blank" rel="noreferrer" className="rounded-lg bg-slate-900 px-4 py-1.5 text-xs font-bold text-white">Read Attached PDF</a>
+            <a href={selectedOpportunity.pdfUrl} download={`${selectedOpportunity.title}.pdf`} className="rounded-lg border border-slate-200 px-4 py-1.5 text-xs font-bold text-slate-700">Download PDF</a>
+          </div>}
+
           {/* Application Box */}
           {!isApplying ? (
             <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
