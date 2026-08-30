@@ -96,14 +96,6 @@ const MainContent: React.FC = () => {
   const routeGuardRef = useRef(false);
 
   useEffect(() => {
-    if (!selectedUserForProfile) return;
-    const currentPath = window.location.pathname;
-    if (!currentPath.startsWith('/profile/')) {
-      setSelectedUserForProfile(null);
-    }
-  }, [currentTab, selectedUserForProfile, setSelectedUserForProfile]);
-
-  useEffect(() => {
     const syncFromLocation = () => {
       if (routeGuardRef.current) return;
       const { userId, projectId, publicationId, achievementId, articleId, opportunityId } = getRouteState(window.location.pathname);
@@ -111,7 +103,7 @@ const MainContent: React.FC = () => {
 
       if (userId) {
         const nextUser = users.find((user) => user.id === userId) || null;
-        setSelectedUserForProfile(nextUser);
+        setSelectedUserForProfile((previous) => previous?.id === nextUser?.id ? previous : nextUser);
         setSelectedProject(null);
         setSelectedPublication(null);
         setSelectedAchievement(null);
@@ -144,7 +136,7 @@ const MainContent: React.FC = () => {
 
     if (selectedUserForProfile) {
       const nextPath = `/profile/${selectedUserForProfile.id}`;
-      if (window.location.pathname !== nextPath) {
+      if (window.location.pathname !== nextPath && !window.location.pathname.startsWith('/profile/')) {
         routeGuardRef.current = true;
         window.history.replaceState({ profileId: selectedUserForProfile.id }, '', nextPath);
         routeGuardRef.current = false;
