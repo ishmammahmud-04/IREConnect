@@ -25,6 +25,7 @@ export const ChatModal: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+  const attachmentInputRef = useRef<HTMLInputElement>(null);
   const connections = useMemo(() => getConnectionUsers('connected'), [getConnectionUsers]);
   const filteredConnections = connections.filter((user) => user.name.toLowerCase().includes(search.toLowerCase()));
 
@@ -118,6 +119,7 @@ export const ChatModal: React.FC = () => {
       setMessages((previous) => previous.some((message) => message.id === data.id) ? previous : [...previous, messageRowToMessage(data)]);
       setBody('');
       setAttachment(null);
+      if (attachmentInputRef.current) attachmentInputRef.current.value = '';
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'Could not send message.');
     } finally {
@@ -169,12 +171,39 @@ export const ChatModal: React.FC = () => {
                 <div ref={endRef} />
               </div>
               <form onSubmit={sendMessage} className="border-t border-slate-200 p-3">
-                {attachment && <p className="mb-2 truncate text-[11px] text-slate-600">{attachment.name}</p>}
+                {attachment && (
+                  <div className="mb-2 flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5">
+                    <span className="truncate text-[11px] text-slate-600">{attachment.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAttachment(null);
+                        if (attachmentInputRef.current) attachmentInputRef.current.value = '';
+                      }}
+                      className="rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[10px] font-bold text-slate-600 hover:bg-slate-100"
+                      aria-label="Remove selected attachment"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
                 <div className="flex items-end gap-2">
-                  <label className="cursor-pointer rounded-lg p-2 text-slate-500 hover:bg-slate-100" title="Attach a picture or file">
+                  <button
+                    type="button"
+                    onClick={() => attachmentInputRef.current?.click()}
+                    className="cursor-pointer rounded-lg p-2 text-slate-500 hover:bg-slate-100"
+                    title="Attach a picture or file"
+                    aria-label="Attach a picture or file"
+                  >
                     <span className="material-symbols-outlined text-[19px]">attach_file</span>
-                    <input type="file" accept="image/*,.pdf,.doc,.docx,.txt,.zip" className="hidden" onChange={(event) => setAttachment(event.target.files?.[0] || null)} />
-                  </label>
+                  </button>
+                  <input
+                    ref={attachmentInputRef}
+                    type="file"
+                    accept="image/*,.pdf,.doc,.docx,.txt,.zip"
+                    className="hidden"
+                    onChange={(event) => setAttachment(event.target.files?.[0] || null)}
+                  />
                   <textarea value={body} onChange={(event) => setBody(event.target.value)} rows={1} placeholder="Write a message…" className="max-h-28 min-h-10 flex-1 resize-y rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-blue-500" />
                   <button type="submit" disabled={isSending || (!body.trim() && !attachment)} className="rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50">{isSending ? 'Sending…' : 'Send'}</button>
                 </div>
