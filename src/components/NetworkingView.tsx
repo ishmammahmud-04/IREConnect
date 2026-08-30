@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { User } from '../types';
 
@@ -17,13 +17,26 @@ export const NetworkingView: React.FC = () => {
     getMutualConnectionCount,
     getConnectionStatus,
     getConnectionUsers,
-    openChat
+    openChat,
+    directorySearchResults,
+    searchDirectoryUsers
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'connections' | 'requests' | 'mentorship'>('connections');
   const [requestsSubTab, setRequestsSubTab] = useState<'received' | 'sent'>('received');
   const [mentorshipTopic, setMentorshipTopic] = useState('All Topics');
+  const [networkSearchQuery, setNetworkSearchQuery] = useState('');
+  const [mentorSearchQuery, setMentorSearchQuery] = useState('');
   const [isAvailableToggle, setIsAvailableToggle] = useState(currentUser.isAvailableForMentorship || false);
+
+  const activeSearchQuery = activeTab === 'mentorship' ? mentorSearchQuery : networkSearchQuery;
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void searchDirectoryUsers(activeSearchQuery);
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [activeSearchQuery]);
 
   const mentorshipTopics = [
     'All Topics',
@@ -41,6 +54,8 @@ export const NetworkingView: React.FC = () => {
   const mentors = users.filter((u) => u.isAvailableForMentorship || u.role === 'faculty' || u.role === 'alumni');
 
   const filteredMentors = mentors.filter((m) => {
+    const q = mentorSearchQuery.trim().toLowerCase();
+    if (q && ![m.name, m.headline, m.designation, ...(m.skills || []), ...(m.specialization || []), ...(m.mentorshipCategories || [])].some((value) => value?.toLowerCase().includes(q))) return false;
     if (mentorshipTopic === 'All Topics') return true;
     return (
       (m.mentorshipCategories && m.mentorshipCategories.includes(mentorshipTopic)) ||
@@ -52,6 +67,10 @@ export const NetworkingView: React.FC = () => {
   const connectionList = getConnectionUsers('connected');
   const pendingOutgoing = getConnectionUsers('pending', 'outgoing');
   const suggestedPeople = users.filter((u) => u.id !== currentUser.id && getConnectionStatus(u.id) === 'none');
+  const searchedPeople = (directorySearchResults || users).filter((u) => u.id !== currentUser.id);
+  const displayedPeople = networkSearchQuery.trim() ? searchedPeople : suggestedPeople;
+  const searchedMentors = (directorySearchResults || users).filter((u) => u.isAvailableForMentorship || u.role === 'faculty' || u.role === 'alumni');
+  const displayedMentors = mentorSearchQuery.trim() ? searchedMentors.filter((mentor) => filteredMentors.some((item) => item.id === mentor.id)) : filteredMentors;
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto animate-in fade-in duration-300 pb-16">
@@ -93,13 +112,23 @@ export const NetworkingView: React.FC = () => {
       {/* Tab 1: Connections */}
       {activeTab === 'connections' && (
         <div className="space-y-6">
+          <div className="relative w-full">
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+            <input
+              type="search"
+              value={networkSearchQuery}
+              onChange={(event) => setNetworkSearchQuery(event.target.value)}
+              placeholder="Search everyone by name, role, skill, or location..."
+              className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-xs text-slate-900 outline-none transition-all focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+            />
+          </div>
           {/* People You May Know */}
           <section className="space-y-2.5">
             <h2 className="font-heading text-[16px] font-bold text-slate-900">
-              People You May Know
+              {networkSearchQuery.trim() ? `Search Results (${displayedPeople.length})` : 'People You May Know'}
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-              {(suggestedPeople || []).slice(0, 3).map((person) => (
+              {(displayedPeople || []).slice(0, networkSearchQuery.trim() ? 50 : 3).map((person) => (
                 <div
                   key={person.id}
                   className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs flex flex-col items-center text-center justify-between hover:shadow-xs transition-all"
@@ -295,6 +324,16 @@ export const NetworkingView: React.FC = () => {
           {/* Tab 3: Mentoring */}
       {activeTab === 'mentorship' && (
         <div className="space-y-4">
+          <div className="relative w-full">
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+            <input
+              type="search"
+              value={mentorSearchQuery}
+              onChange={(event) => setMentorSearchQuery(event.target.value)}
+              placeholder="Search mentors by name, expertise, or specialty..."
+              className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-xs text-slate-900 outline-none transition-all focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+            />
+          </div>
           {/* Availability Switch Banner */}
           <div className="bg-white rounded-xl p-4 md:p-5 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
             <div className="space-y-0.5">
@@ -341,7 +380,7 @@ export const NetworkingView: React.FC = () => {
 
           {/* Mentors Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {(filteredMentors || []).map((mentor) => (
+            {(displayedMentors || []).map((mentor) => (
               <div
                 key={mentor.id}
                 className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between"
@@ -394,6 +433,11 @@ export const NetworkingView: React.FC = () => {
               </div>
             ))}
           </div>
+          {mentorSearchQuery.trim() && displayedMentors.length === 0 && (
+            <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-xs text-slate-500">
+              No matching mentors found.
+            </div>
+          )}
         </div>
       )}
     </div>
