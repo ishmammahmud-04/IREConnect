@@ -209,6 +209,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const setCurrentTab = useCallback((tab: MainTab) => {
+    setSelectedUserForProfile(null);
     setCurrentTabState(tab);
     if (typeof window === 'undefined') return;
     const nextPath = tabToPath[tab];

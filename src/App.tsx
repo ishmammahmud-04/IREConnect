@@ -94,6 +94,13 @@ const MainContent: React.FC = () => {
     syncCurrentTabFromPath,
   } = useApp();
   const routeGuardRef = useRef(false);
+  const [lastNonProfileTab, setLastNonProfileTab] = useState<'home' | 'discover' | 'network' | 'opportunities' | 'department' | 'profile'>('home');
+
+  useEffect(() => {
+    if (currentTab !== 'profile' && !window.location.pathname.startsWith('/profile/')) {
+      setLastNonProfileTab(currentTab);
+    }
+  }, [currentTab]);
 
   useEffect(() => {
     const syncFromLocation = () => {
@@ -210,6 +217,15 @@ const MainContent: React.FC = () => {
   }, [selectedUserForProfile, selectedProject, selectedPublication, selectedAchievement, selectedOpportunity, selectedArticle, currentTab]);
 
   const renderActiveScreen = () => {
+    const tabFallbackMap: Record<typeof lastNonProfileTab, string> = {
+      home: '/',
+      discover: '/discover',
+      network: '/network',
+      opportunities: '/opportunities',
+      department: '/department',
+      profile: '/profile'
+    };
+
     // If a user profile is selected from any screen, show that user's profile
     if (selectedUserForProfile) {
       return (
@@ -217,7 +233,7 @@ const MainContent: React.FC = () => {
           userOverride={selectedUserForProfile}
           onBack={() => {
             setSelectedUserForProfile(null);
-            const fallbackPath = currentTab === 'profile' ? '/profile' : currentTab === 'discover' ? '/discover' : currentTab === 'opportunities' ? '/opportunities' : currentTab === 'network' ? '/network' : currentTab === 'department' ? '/department' : '/';
+            const fallbackPath = tabFallbackMap[lastNonProfileTab] || '/';
             routeGuardRef.current = true;
             window.history.replaceState({}, '', fallbackPath);
             routeGuardRef.current = false;
