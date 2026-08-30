@@ -121,9 +121,6 @@ const MainContent: React.FC = () => {
       const nextArticle = articleId ? articles.find((article) => article.id === articleId) || null : null;
       const nextOpportunity = opportunityId ? opportunities.find((opportunity) => opportunity.id === opportunityId) || null : null;
 
-      if (selectedUserForProfile && !window.location.pathname.startsWith('/profile/')) {
-        setSelectedUserForProfile(null);
-      }
       setSelectedProject(nextProject);
       setSelectedPublication(nextPublication);
       setSelectedAchievement(nextAchievement);
