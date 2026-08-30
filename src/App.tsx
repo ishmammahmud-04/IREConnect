@@ -396,6 +396,8 @@ const profileRowToUser = (profile: Record<string, unknown>, fallback: User): Use
   bannerUrl: typeof profile.banner_url === 'string' && profile.banner_url ? profile.banner_url : fallback.bannerUrl,
   avatarPath: typeof profile.avatar_path === 'string' ? profile.avatar_path : fallback.avatarPath,
   bannerPath: typeof profile.banner_path === 'string' ? profile.banner_path : fallback.bannerPath,
+  cvUrl: typeof profile.cv_url === 'string' && profile.cv_url ? profile.cv_url : fallback.cvUrl,
+  cvPath: typeof profile.cv_path === 'string' ? profile.cv_path : fallback.cvPath,
   batch: typeof profile.batch === 'string' ? profile.batch : fallback.batch,
   studentId: typeof profile.student_id === 'string' ? profile.student_id : fallback.studentId,
   department: typeof profile.department === 'string' ? profile.department : fallback.department,
@@ -414,7 +416,7 @@ const profileRowToDirectoryUser = (profile: Record<string, unknown>): User => {
   const name = typeof profile.full_name === 'string' ? profile.full_name : 'IRE Member';
   return profileRowToUser(profile, {
     id: String(profile.user_id), name, email: '', role: 'student', verificationStatus: 'Verified Student',
-    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=2563eb&color=fff`, department: 'IoT & Robotics Engineering', headline: '', bio: '', location: '', skills: [], education: [], experience: [], externalLinks: {},
+    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=2563eb&color=fff`, department: 'IoT & Robotics Engineering', headline: '', bio: '', location: '', skills: [], education: [], experience: [], externalLinks: {}, cvUrl: undefined, cvPath: undefined,
     privacy: { cv: 'department', email: 'private', phone: 'private', experience: 'public', projects: 'public', achievements: 'public', publications: 'public', externalLinks: 'public' },
     notificationSettings: { connectionRequests: true, acceptedConnections: true, opportunityAlerts: true, deadlineReminders: true, announcements: true, events: true, contentInteractions: true, mentorshipRequests: true }
   });
@@ -477,6 +479,8 @@ const toAppUser = (user: Session['user']): User => {
     role,
     verificationStatus: role === 'alumni' ? 'Verified Alumni' : role === 'faculty' ? 'Verified Faculty' : 'Verified Student',
     avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=2563eb&color=fff`,
+    cvUrl: undefined,
+    cvPath: undefined,
     batch: typeof user.user_metadata.batch === 'string' ? user.user_metadata.batch : undefined,
     studentId: typeof user.user_metadata.student_id === 'string' ? user.user_metadata.student_id : undefined,
     department: 'IoT & Robotics Engineering',

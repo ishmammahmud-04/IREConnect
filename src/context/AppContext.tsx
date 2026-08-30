@@ -44,7 +44,9 @@ interface AppContextType {
   getMutualConnectionCount: (userId: string) => number;
   getConnectionUsers: (status: 'connected' | 'pending', direction?: 'incoming' | 'outgoing') => User[];
   updateProfileImage: (file: File, type: 'avatar' | 'banner') => Promise<void>;
+  updateProfileCV: (file: File) => Promise<void>;
   isUploadingProfileImage: boolean;
+  isUploadingCV: boolean;
   
   // Search & Filters
   globalSearchQuery: string;
@@ -148,6 +150,8 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 const emptyUser: User = {
   id: '', name: '', email: '', role: 'student', verificationStatus: 'Pending Verification', avatar: '',
   department: '', headline: '', bio: '', location: '', skills: [], education: [], experience: [], externalLinks: {},
+  cvUrl: undefined,
+  cvPath: undefined,
   privacy: { cv: 'private', email: 'private', phone: 'private', experience: 'private', projects: 'private', achievements: 'private', publications: 'private', externalLinks: 'private' },
   notificationSettings: { connectionRequests: true, acceptedConnections: true, opportunityAlerts: true, deadlineReminders: true, announcements: true, events: true, contentInteractions: true, mentorshipRequests: true }
 };
@@ -195,6 +199,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isUploadingProfileImage, setIsUploadingProfileImage] = useState(false);
+  const [isUploadingCV, setIsUploadingCV] = useState(false);
   const [isChatModalOpen, setIsChatModalOpen] = useState(false);
   const [chatTargetUser, setChatTargetUser] = useState<User | null>(null);
 
@@ -617,6 +622,59 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const updateProfileCV = async (file: File) => {
+    if (!currentUser.id) {
+      showToast('Please sign in before uploading your CV.');
+      return;
+    }
+
+    const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+    if (!isPdf) {
+      showToast('Only PDF files are allowed for your CV.');
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      showToast('Your CV must be 10 MB or smaller.');
+      return;
+    }
+
+    setIsUploadingCV(true);
+    try {
+      const path = `${currentUser.id}/cv-${Date.now()}.pdf`;
+      const { error: uploadError } = await supabase.storage.from('profile-media').upload(path, file, {
+        upsert: false,
+        contentType: 'application/pdf'
+      });
+
+      if (uploadError) {
+        showToast(`Could not upload CV: ${uploadError.message}`);
+        return;
+      }
+
+      const { data } = supabase.storage.from('profile-media').getPublicUrl(path);
+      const oldPath = currentUser.cvPath;
+      const { error: profileError } = await supabase.from('profiles').update({
+        cv_url: data.publicUrl,
+        cv_path: path,
+        updated_at: new Date().toISOString()
+      }).eq('user_id', currentUser.id);
+
+      if (profileError) {
+        showToast(`CV uploaded, but the profile save failed: ${profileError.message}`);
+        return;
+      }
+
+      if (oldPath) await supabase.storage.from('profile-media').remove([oldPath]);
+      setCurrentUser((previous) => ({ ...previous, cvUrl: data.publicUrl, cvPath: path }));
+      showToast('CV uploaded successfully.');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Could not upload that CV file.');
+    } finally {
+      setIsUploadingCV(false);
+    }
+  };
+
   const markNotificationsAsRead = async () => {
     const { error } = await supabase.from('notifications').update({ is_read: true }).eq('user_id', currentUser.id).eq('is_read', false);
     if (error) {
@@ -770,7 +828,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     getConnectionUsers,
     getConnectionStatus,
     updateProfileImage,
+    updateProfileCV,
     isUploadingProfileImage,
+    isUploadingCV,
     globalSearchQuery,
     setGlobalSearchQuery,
     activeDiscoverCategory,
@@ -881,7 +941,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     getConnectionUsers,
     getConnectionStatus,
     updateProfileImage,
+    updateProfileCV,
     isUploadingProfileImage,
+    isUploadingCV,
     globalSearchQuery,
     setGlobalSearchQuery,
     activeDiscoverCategory,

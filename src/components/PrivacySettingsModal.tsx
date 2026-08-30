@@ -13,7 +13,9 @@ export const PrivacySettingsModal: React.FC = () => {
     updateProfileDetails,
     showToast,
     updateProfileImage,
-    isUploadingProfileImage
+    updateProfileCV,
+    isUploadingProfileImage,
+    isUploadingCV
   } = useApp();
 
   const [cvVis, setCvVis] = useState<VisibilityLevel>('department');
@@ -37,6 +39,7 @@ export const PrivacySettingsModal: React.FC = () => {
   const [notifConnectionRequests, setNotifConnectionRequests] = useState<boolean>(true);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
+  const cvInputRef = useRef<HTMLInputElement>(null);
   const cameraVideoRef = useRef<HTMLVideoElement>(null);
   const cameraStreamRef = useRef<MediaStream | null>(null);
   const [cameraType, setCameraType] = useState<'avatar' | 'banner' | null>(null);
@@ -44,6 +47,12 @@ export const PrivacySettingsModal: React.FC = () => {
   const handleImageSelected = async (event: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'banner') => {
     const file = event.target.files?.[0];
     if (file) await updateProfileImage(file, type);
+    event.target.value = '';
+  };
+
+  const handleCVSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) await updateProfileCV(file);
     event.target.value = '';
   };
 
@@ -226,6 +235,21 @@ export const PrivacySettingsModal: React.FC = () => {
               className="w-full resize-none rounded-lg border border-slate-200 px-2.5 py-2 text-xs text-slate-900 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
             />
             <p className="text-right text-[10px] text-slate-400">{shortBio.length}/280</p>
+          </div>
+          <div className="space-y-2 border-b border-slate-100 pb-3.5">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 font-mono">Curriculum Vitae</p>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" disabled={isUploadingCV} onClick={() => cvInputRef.current?.click()} className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-60">
+                <span className="material-symbols-outlined mr-1 align-middle text-[15px]">upload_file</span>Upload PDF CV
+              </button>
+              {currentUser.cvUrl && (
+                <a href={currentUser.cvUrl} target="_blank" rel="noreferrer" className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50">
+                  <span className="material-symbols-outlined mr-1 align-middle text-[15px]">visibility</span>View CV
+                </a>
+              )}
+            </div>
+            <input ref={cvInputRef} type="file" accept=".pdf,application/pdf" className="hidden" onChange={(event) => void handleCVSelected(event)} />
+            <p className="text-[10px] text-slate-500">{isUploadingCV ? 'Uploading PDF CV...' : 'Only PDF files are accepted. Maximum size: 10 MB.'}</p>
           </div>
           <div className="space-y-2 border-b border-slate-100 pb-3.5">
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 font-mono">Profile details</p>

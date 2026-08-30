@@ -340,20 +340,31 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
               Verified PDF resume containing academic history, research projects, and skills.
             </p>
             <div className="flex flex-col gap-1.5 pt-1">
-              <button
-                onClick={() => showToast('Opening CV viewer...')}
-                className="w-full py-1.5 px-3 rounded-lg bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 shadow-2xs"
-              >
-                 <span className="material-symbols-outlined text-[15px]">visibility</span>
-                <span>View CV (PDF)</span>
-              </button>
-              <button
-                onClick={() => showToast('Downloading Verified Academic CV...')}
-                className="w-full py-1.5 px-3 rounded-lg border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all flex items-center justify-center gap-1.5"
-              >
-                <span className="material-symbols-outlined text-[15px]">download</span>
-                <span>Download Resume</span>
-              </button>
+              {user.cvUrl ? (
+                <>
+                  <a
+                    href={user.cvUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="w-full py-1.5 px-3 rounded-lg bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 shadow-2xs"
+                  >
+                    <span className="material-symbols-outlined text-[15px]">visibility</span>
+                    <span>View CV (PDF)</span>
+                  </a>
+                  <a
+                    href={user.cvUrl}
+                    download
+                    className="w-full py-1.5 px-3 rounded-lg border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all flex items-center justify-center gap-1.5"
+                  >
+                    <span className="material-symbols-outlined text-[15px]">download</span>
+                    <span>Download Resume</span>
+                  </a>
+                </>
+              ) : (
+                <div className="text-[11px] text-slate-500 rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-center">
+                  No CV uploaded yet.
+                </div>
+              )}
             </div>
           </section>
 

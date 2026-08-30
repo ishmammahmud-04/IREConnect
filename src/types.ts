@@ -90,6 +90,7 @@ export interface User {
   privacy: PrivacySettings;
   notificationSettings: NotificationSettings;
   cvUrl?: string;
+  cvPath?: string;
   isAvailableForMentorship?: boolean;
   mentorshipCategories?: string[];
   mutualConnectionsCount?: number;
