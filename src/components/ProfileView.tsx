@@ -18,6 +18,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
     opportunities,
     setSelectedProject,
     setSelectedAchievement,
+    setSelectedPublication,
     setSelectedArticle,
     setSelectedOpportunity,
     setIsSettingsModalOpen,
@@ -511,6 +512,45 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
                   </div>
                 </div>
               </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {canViewPublications && userPublications.length > 0 && (
+        <section className="bg-white rounded-xl border border-slate-200 p-5 shadow-2xs space-y-3">
+          <h2 className="font-heading text-sm font-bold text-slate-900">
+            Published Papers &amp; Journals ({userPublications.length})
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {userPublications.map((publication) => (
+              <button
+                type="button"
+                key={publication.id}
+                onClick={() => setSelectedPublication(publication)}
+                className="flex items-start gap-3 rounded-xl border border-slate-200 p-4 text-left transition-all hover:border-blue-500 hover:shadow-xs"
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-600">
+                  <span className="material-symbols-outlined text-[20px]">article</span>
+                </div>
+                <div className="min-w-0 space-y-0.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 font-mono">
+                    {publication.publicationType} · {publication.status}
+                  </span>
+                  <h3 className="font-heading text-xs md:text-sm font-bold leading-snug text-slate-900">
+                    {publication.title}
+                  </h3>
+                  <p className="truncate text-[11px] text-slate-500">
+                    {publication.journal} · {publication.date}
+                  </p>
+                  {publication.pdfUrl && (
+                    <span className="inline-flex items-center gap-1 pt-1 text-[10px] font-bold text-blue-600">
+                      <span className="material-symbols-outlined text-[13px]">picture_as_pdf</span>
+                      PDF available
+                    </span>
+                  )}
+                </div>
+              </button>
             ))}
           </div>
         </section>
