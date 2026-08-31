@@ -11,8 +11,14 @@ export const FacultyProfileView: React.FC<FacultyProfileViewProps> = ({ facultyU
   const {
     projects,
     publications,
+    achievements,
+    articles,
+    opportunities,
     setSelectedProject,
     setSelectedPublication,
+    setSelectedAchievement,
+    setSelectedArticle,
+    setSelectedOpportunity,
     openMentorshipRequest,
     showToast
   } = useApp();
@@ -26,13 +32,17 @@ export const FacultyProfileView: React.FC<FacultyProfileViewProps> = ({ facultyU
   );
 
   const facultyPublications = (publications || []).filter((p) =>
-    p.authors?.some(
+    p.ownerId === facultyUser.id || p.authors?.some(
       (a) =>
         a &&
         facultyUser.name &&
         a.toLowerCase().includes(facultyUser.name.toLowerCase())
     )
   );
+  const facultyAchievements = (achievements || []).filter((achievement) => achievement.ownerId === facultyUser.id || achievement.personName?.toLowerCase() === facultyUser.name?.toLowerCase());
+  const facultyArticles = (articles || []).filter((article) => article.ownerId === facultyUser.id || article.author?.id === facultyUser.id);
+  const facultyOpportunities = (opportunities || []).filter((opportunity) => opportunity.ownerId === facultyUser.id);
+  const postedContentCount = facultyAchievements.length + facultyArticles.length + facultyOpportunities.length + facultyPublications.length + supervisedProjects.length;
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto animate-in fade-in duration-300 pb-16">
@@ -119,6 +129,39 @@ export const FacultyProfileView: React.FC<FacultyProfileViewProps> = ({ facultyU
           </div>
         </div>
       </section>
+
+      {postedContentCount > 0 && (
+        <section className="bg-white rounded-xl border border-slate-200 p-5 shadow-2xs space-y-3">
+          <h2 className="font-heading text-sm font-bold text-slate-900">Posted Content ({postedContentCount})</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+            {supervisedProjects.map((project) => (
+              <button type="button" key={`project-${project.id}`} onClick={() => setSelectedProject(project)} className="flex items-start gap-3 rounded-lg border border-slate-200 p-3 text-left hover:border-blue-500 hover:bg-slate-50">
+                <span className="material-symbols-outlined text-blue-600">science</span><span className="min-w-0"><strong className="block truncate text-xs text-slate-900">{project.title}</strong><span className="text-[10px] text-slate-500">Project</span></span>
+              </button>
+            ))}
+            {facultyAchievements.map((achievement) => (
+              <button type="button" key={`achievement-${achievement.id}`} onClick={() => setSelectedAchievement(achievement)} className="flex items-start gap-3 rounded-lg border border-slate-200 p-3 text-left hover:border-blue-500 hover:bg-slate-50">
+                <span className="material-symbols-outlined text-amber-600">emoji_events</span><span className="min-w-0"><strong className="block truncate text-xs text-slate-900">{achievement.title}</strong><span className="text-[10px] text-slate-500">Award</span></span>
+              </button>
+            ))}
+            {facultyPublications.map((publication) => (
+              <button type="button" key={`publication-${publication.id}`} onClick={() => setSelectedPublication(publication)} className="flex items-start gap-3 rounded-lg border border-slate-200 p-3 text-left hover:border-blue-500 hover:bg-slate-50">
+                <span className="material-symbols-outlined text-emerald-600">article</span><span className="min-w-0"><strong className="block truncate text-xs text-slate-900">{publication.title}</strong><span className="text-[10px] text-slate-500">Paper / Journal</span></span>
+              </button>
+            ))}
+            {facultyArticles.map((article) => (
+              <button type="button" key={`article-${article.id}`} onClick={() => setSelectedArticle(article)} className="flex items-start gap-3 rounded-lg border border-slate-200 p-3 text-left hover:border-blue-500 hover:bg-slate-50">
+                <span className="material-symbols-outlined text-indigo-600">auto_stories</span><span className="min-w-0"><strong className="block truncate text-xs text-slate-900">{article.title}</strong><span className="text-[10px] text-slate-500">Article</span></span>
+              </button>
+            ))}
+            {facultyOpportunities.map((opportunity) => (
+              <button type="button" key={`opportunity-${opportunity.id}`} onClick={() => setSelectedOpportunity(opportunity)} className="flex items-start gap-3 rounded-lg border border-slate-200 p-3 text-left hover:border-blue-500 hover:bg-slate-50">
+                <span className="material-symbols-outlined text-rose-600">work</span><span className="min-w-0"><strong className="block truncate text-xs text-slate-900">{opportunity.title}</strong><span className="text-[10px] text-slate-500">Opportunity</span></span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* 2-Column Bento: Courses & Supervised Students */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4">

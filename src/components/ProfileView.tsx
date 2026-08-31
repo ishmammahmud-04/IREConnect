@@ -14,8 +14,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
     projects,
     achievements,
     publications,
+    articles,
+    opportunities,
     setSelectedProject,
     setSelectedAchievement,
+    setSelectedArticle,
+    setSelectedOpportunity,
     setIsSettingsModalOpen,
     setIsLinkedInModalOpen,
     openMentorshipRequest,
@@ -34,6 +38,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
   const canViewExperience = canView(user.privacy?.experience || 'private');
   const canViewProjects = canView(user.privacy?.projects || 'private');
   const canViewAchievements = canView(user.privacy?.achievements || 'private');
+  const canViewPublications = canView(user.privacy?.publications || 'private');
   const canViewCv = canView(user.privacy?.cv || 'private');
   const canViewExternalLinks = canView(user.privacy?.externalLinks || 'private');
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
@@ -88,24 +93,29 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
     return <FacultyProfileView facultyUser={user} onBack={onBack} />;
   }
 
+  const sameOwner = (ownerId?: string) => Boolean(ownerId && user.id && String(ownerId) === String(user.id));
   const userProjects = (projects || []).filter((p) =>
-    p.teamMembers?.some(
+    sameOwner(p.ownerId) || p.teamMembers?.some(
       (m) =>
         m.id === user.id ||
         (m.name && user.name && m.name.toLowerCase() === user.name.toLowerCase())
     )
   );
   const userAchievements = (achievements || []).filter(
-    (a) =>
+    (a) => sameOwner(a.ownerId) || Boolean(
       a.personName &&
       user.name &&
       a.personName.toLowerCase() === user.name.toLowerCase()
+    )
   );
   const userPublications = (publications || []).filter((p) =>
-    p.authors?.some(
+    sameOwner(p.ownerId) || p.authors?.some(
       (a) => a && user.name && a.toLowerCase().includes(user.name.toLowerCase())
     )
   );
+  const userArticles = (articles || []).filter((article) => sameOwner(article.ownerId) || article.author?.id === user.id);
+  const userOpportunities = (opportunities || []).filter((opportunity) => sameOwner(opportunity.ownerId));
+  const postedContentCount = userProjects.length + userAchievements.length + userPublications.length + userArticles.length + userOpportunities.length;
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto animate-in fade-in duration-300 pb-16">
@@ -532,6 +542,46 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
                   <p className="text-xs text-slate-500 line-clamp-2 mt-0.5">{ach.description}</p>
                 </div>
               </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {postedContentCount > 0 && (
+        <section className="bg-white rounded-xl border border-slate-200 p-5 shadow-2xs space-y-3">
+          <h2 className="font-heading text-sm font-bold text-slate-900">
+            Posted Content ({postedContentCount})
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+            {canViewProjects && userProjects.map((project) => (
+              <button type="button" key={`project-${project.id}`} onClick={() => setSelectedProject(project)} className="flex items-start gap-3 rounded-lg border border-slate-200 p-3 text-left hover:border-blue-500 hover:bg-slate-50">
+                <span className="material-symbols-outlined text-blue-600">science</span>
+                <span className="min-w-0"><strong className="block truncate text-xs text-slate-900">{project.title}</strong><span className="text-[10px] text-slate-500">Project</span></span>
+              </button>
+            ))}
+            {canViewAchievements && userAchievements.map((achievement) => (
+              <button type="button" key={`achievement-${achievement.id}`} onClick={() => setSelectedAchievement(achievement)} className="flex items-start gap-3 rounded-lg border border-slate-200 p-3 text-left hover:border-blue-500 hover:bg-slate-50">
+                <span className="material-symbols-outlined text-amber-600">emoji_events</span>
+                <span className="min-w-0"><strong className="block truncate text-xs text-slate-900">{achievement.title}</strong><span className="text-[10px] text-slate-500">Award</span></span>
+              </button>
+            ))}
+            {canViewPublications && userPublications.map((publication) => (
+              <button type="button" key={`publication-${publication.id}`} onClick={() => setSelectedPublication(publication)} className="flex items-start gap-3 rounded-lg border border-slate-200 p-3 text-left hover:border-blue-500 hover:bg-slate-50">
+                <span className="material-symbols-outlined text-emerald-600">article</span>
+                <span className="min-w-0"><strong className="block truncate text-xs text-slate-900">{publication.title}</strong><span className="text-[10px] text-slate-500">Paper / Journal</span></span>
+              </button>
+            ))}
+            {userArticles.map((article) => (
+              <button type="button" key={`article-${article.id}`} onClick={() => setSelectedArticle(article)} className="flex items-start gap-3 rounded-lg border border-slate-200 p-3 text-left hover:border-blue-500 hover:bg-slate-50">
+                <span className="material-symbols-outlined text-indigo-600">auto_stories</span>
+                <span className="min-w-0"><strong className="block truncate text-xs text-slate-900">{article.title}</strong><span className="text-[10px] text-slate-500">Article</span></span>
+              </button>
+            ))}
+            {userOpportunities.map((opportunity) => (
+              <button type="button" key={`opportunity-${opportunity.id}`} onClick={() => setSelectedOpportunity(opportunity)} className="flex items-start gap-3 rounded-lg border border-slate-200 p-3 text-left hover:border-blue-500 hover:bg-slate-50">
+                <span className="material-symbols-outlined text-rose-600">work</span>
+                <span className="min-w-0"><strong className="block truncate text-xs text-slate-900">{opportunity.title}</strong><span className="text-[10px] text-slate-500">Opportunity</span></span>
+              </button>
             ))}
           </div>
         </section>
