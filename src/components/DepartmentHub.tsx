@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { DepartmentEvent } from '../types';
+import { Announcement, DepartmentEvent } from '../types';
 
 export const DepartmentHub: React.FC = () => {
   const {
@@ -16,7 +16,9 @@ export const DepartmentHub: React.FC = () => {
     toggleEventRsvp,
     showToast,
     networkStats,
-    openCreateModalWithType
+    openCreateModalWithType,
+    updatePublishedContent,
+    deletePublishedContent
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'announcements' | 'events' | 'hall_of_fame' | 'history'>('announcements');
@@ -29,6 +31,9 @@ export const DepartmentHub: React.FC = () => {
   const [formLocation, setFormLocation] = useState('');
   const [formCategory, setFormCategory] = useState('Workshop');
   const [milestones, setMilestones] = useState<{ year: string; title: string; description: string }[]>([]);
+  const [expandedAnnouncements, setExpandedAnnouncements] = useState<Set<string>>(new Set());
+  const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
+  const [editingEvent, setEditingEvent] = useState<DepartmentEvent | null>(null);
 
   const categories = ['All', 'Exam Notice', 'Workshop', 'Equipment', 'General'];
 
@@ -42,16 +47,34 @@ export const DepartmentHub: React.FC = () => {
 
   const resetForm = () => {
     setFormTitle(''); setFormDescription(''); setFormDate(''); setFormTime(''); setFormLocation(''); setFormCategory('Workshop'); setIsAdding(false);
+    setEditingAnnouncement(null); setEditingEvent(null);
+  };
+  const canManageItem = (item: { ownerId?: string }) => canManageDepartment || item.ownerId === currentUser.id;
+  const startAnnouncementEdit = (item: Announcement) => {
+    setEditingAnnouncement(item); setFormTitle(item.title); setFormDescription(item.description); setFormCategory(item.category); setIsAdding(true);
+  };
+  const startEventEdit = (item: DepartmentEvent) => {
+    setEditingEvent(item); setFormTitle(item.title); setFormDescription(item.description); setFormDate(item.date); setFormTime(item.time); setFormLocation(item.location); setFormCategory(item.category); setIsAdding(true);
   };
 
   const submitDepartmentItem = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!formTitle.trim() || !formDescription.trim()) return;
     if (activeTab === 'announcements') {
+      if (editingAnnouncement) {
+        await updatePublishedContent('announcement', { ...editingAnnouncement, title: formTitle.trim(), description: formDescription.trim(), category: formCategory });
+        resetForm();
+        return;
+      }
       await createAnnouncement({ title: formTitle.trim(), description: formDescription.trim(), category: formCategory as any, author: currentUser.name, date: 'Just now' });
     } else if (activeTab === 'events') {
+      if (editingEvent) {
+        await updatePublishedContent('event', { ...editingEvent, title: formTitle.trim(), description: formDescription.trim(), date: formDate || 'TBA', time: formTime || 'TBA', location: formLocation || 'TBA', category: formCategory });
+        resetForm();
+        return;
+      }
       const newEvent: DepartmentEvent = {
-        id: `event-${Date.now()}`, title: formTitle.trim(), date: formDate || 'TBA', time: formTime || 'TBA', location: formLocation || 'IRE Innovation Hub', description: formDescription.trim(), organizer: currentUser.name, coverImage: '', isUpcoming: true, category: formCategory, participantsCount: 0, attendeesAvatars: [], attendeesCount: 0, isUserRsvped: false
+        id: `event-${Date.now()}`, ownerId: currentUser.id, title: formTitle.trim(), date: formDate || 'TBA', time: formTime || 'TBA', location: formLocation || 'IRE Innovation Hub', description: formDescription.trim(), organizer: currentUser.name, coverImage: '', isUpcoming: true, category: formCategory, participantsCount: 0, attendeesAvatars: [], attendeesCount: 0, isUserRsvped: false
       };
       await createDepartmentEvent(newEvent);
     } else if (canManageDepartment) {
@@ -207,12 +230,17 @@ export const DepartmentHub: React.FC = () => {
                   <span className="text-[11px] text-slate-400 font-medium">By {ann.author}</span>
                 </div>
 
-                <h2 className="font-heading text-sm md:text-base font-bold text-slate-900 mb-1 leading-snug">
-                  {ann.title}
-                </h2>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  {ann.description}
-                </p>
+                <div className="flex items-start justify-between gap-3">
+                  <button type="button" onClick={() => setExpandedAnnouncements((previous) => { const next = new Set(previous); if (next.has(ann.id)) next.delete(ann.id); else next.add(ann.id); return next; })} className="flex-1 text-left">
+                    <h2 className="font-heading text-sm md:text-base font-bold text-slate-900 mb-1 leading-snug">{ann.title}</h2>
+                    <p className={`text-xs text-slate-600 leading-relaxed ${expandedAnnouncements.has(ann.id) ? '' : 'line-clamp-2'}`}>{ann.description}</p>
+                  </button>
+                  <span className="material-symbols-outlined text-slate-400 text-[18px]">{expandedAnnouncements.has(ann.id) ? 'expand_less' : 'expand_more'}</span>
+                </div>
+                {canManageItem(ann) && <div className="mt-3 flex gap-2">
+                  <button type="button" onClick={() => startAnnouncementEdit(ann)} className="rounded-md border border-slate-200 px-2.5 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-50">Edit</button>
+                  <button type="button" onClick={() => void deletePublishedContent('announcement', ann.id)} className="rounded-md border border-rose-200 px-2.5 py-1 text-[11px] font-bold text-rose-700 hover:bg-rose-50">Delete</button>
+                </div>}
 
                 {ann.image && (
                   <div className="mt-3 rounded-lg overflow-hidden max-h-56 bg-slate-100 border border-slate-200">
@@ -267,6 +295,10 @@ export const DepartmentHub: React.FC = () => {
               </div>
 
               <div className="flex md:flex-col items-center gap-2 w-full md:w-auto shrink-0 pt-2.5 md:pt-0 border-t md:border-t-0 border-slate-100">
+                {canManageItem(evt) && <div className="flex gap-2">
+                  <button type="button" onClick={() => startEventEdit(evt)} className="rounded-md border border-slate-200 px-2.5 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-50">Edit</button>
+                  <button type="button" onClick={() => void deletePublishedContent('event', evt.id)} className="rounded-md border border-rose-200 px-2.5 py-1 text-[11px] font-bold text-rose-700 hover:bg-rose-50">Delete</button>
+                </div>}
                 <button
                   onClick={() => toggleEventRsvp(evt.id)}
                   className={`w-full md:w-32 py-1.5 rounded-lg text-xs font-bold transition-all shadow-2xs ${

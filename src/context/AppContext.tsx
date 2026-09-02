@@ -86,8 +86,8 @@ interface AppContextType {
   addOpportunity: (opportunity: Opportunity) => void;
   createAnnouncement: (announcement: Partial<Announcement> & { title: string; description: string }) => void;
   addAnnouncement: (announcement: Partial<Announcement> & { title: string; description: string }) => void;
-  deletePublishedContent: (contentType: 'project' | 'publication' | 'achievement' | 'article' | 'opportunity' | 'announcement', id: string) => Promise<boolean>;
-  updatePublishedContent: (contentType: 'project' | 'publication' | 'achievement' | 'article' | 'opportunity' | 'announcement', item: any) => Promise<boolean>;
+  deletePublishedContent: (contentType: 'project' | 'publication' | 'achievement' | 'article' | 'opportunity' | 'announcement' | 'event', id: string) => Promise<boolean>;
+  updatePublishedContent: (contentType: 'project' | 'publication' | 'achievement' | 'article' | 'opportunity' | 'announcement' | 'event', item: any) => Promise<boolean>;
   publishAnnouncement?: (announcement: Partial<Announcement> & { title: string; description: string }) => void;
   submitReport: (contentTitle: string, reason: string, details: string) => void;
   getConnectionStatus: (userId: string) => 'connected' | 'pending' | 'none';
@@ -233,7 +233,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const createDepartmentEvent = async (event: DepartmentEvent) => {
     const ok = await persistContent('event', event);
     if (!ok) return;
-    setEvents((previous) => [event, ...previous.filter((existing) => existing.id !== event.id)]);
+    setEvents((previous) => [{ ...event, ownerId: currentUser.id }, ...previous.filter((existing) => existing.id !== event.id)]);
     showToast(`Event "${event.title}" added to the department calendar.`);
   };
 
@@ -527,6 +527,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const createAnnouncement = async (ann: Partial<Announcement> & { title: string; description: string }) => {
     const newAnn: Announcement = {
       id: ann.id || `ann-${Date.now()}`,
+      ownerId: ann.ownerId || currentUser.id,
       title: ann.title,
       category: (ann.category as any) || 'General',
       description: ann.description,
@@ -893,7 +894,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const updatePublishedContent = async (contentType: 'project' | 'publication' | 'achievement' | 'article' | 'opportunity' | 'announcement', item: any) => {
+  const updatePublishedContent = async (contentType: 'project' | 'publication' | 'achievement' | 'article' | 'opportunity' | 'announcement' | 'event', item: any) => {
     if (!confirmAction('Save these changes to this published item?')) {
       return false;
     }
@@ -919,10 +920,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (contentType === 'announcement') {
       setAnnouncements((prev) => prev.map((entry) => entry.id === item.id ? { ...entry, ...item } : entry));
     }
+    if (contentType === 'event') {
+      setEvents((prev) => prev.map((entry) => entry.id === item.id ? { ...entry, ...item } : entry));
+    }
     return true;
   };
 
-  const deletePublishedContent = async (contentType: 'project' | 'publication' | 'achievement' | 'article' | 'opportunity' | 'announcement', id: string) => {
+  const deletePublishedContent = async (contentType: 'project' | 'publication' | 'achievement' | 'article' | 'opportunity' | 'announcement' | 'event', id: string) => {
     if (!currentUser.id) return false;
 
     if (!confirmAction('Delete this item? This action cannot be undone.')) {
@@ -939,6 +943,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (contentType === 'article') setArticles((prev) => prev.filter((entry) => entry.id !== id));
       if (contentType === 'opportunity') setOpportunities((prev) => prev.filter((entry) => entry.id !== id));
       if (contentType === 'announcement') setAnnouncements((prev) => prev.filter((entry) => entry.id !== id));
+      if (contentType === 'event') setEvents((prev) => prev.filter((entry) => entry.id !== id));
 
       showToast('Published item deleted.');
       return true;
