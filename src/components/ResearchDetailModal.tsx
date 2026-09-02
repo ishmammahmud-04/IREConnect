@@ -98,6 +98,14 @@ export const ResearchDetailModal: React.FC = () => {
             </div>
           </div>
 
+          {selectedPublication.coverImage && (
+            <section className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+              <div className="h-56 w-full bg-slate-100 md:h-72">
+                <MediaViewer src={selectedPublication.coverImage} alt={selectedPublication.title} />
+              </div>
+            </section>
+          )}
+
           {/* Abstract Box */}
           <section className="bg-slate-50 rounded-xl p-4 md:p-5 border border-slate-200 space-y-2">
             <h2 className="font-heading text-xs font-bold text-slate-900 flex items-center gap-1.5 uppercase tracking-wider">
