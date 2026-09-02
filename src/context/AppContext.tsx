@@ -312,7 +312,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const adminVerificationQueue = verificationRequests;
   const flaggedItems = moderationReports;
   const networkStats = useMemo(() => ({
-    students: 330 + users.filter((user) => user.role === 'student' && isCountedStudent(user)).length,
+    students: users.filter((user) => user.role === 'student').length,
     alumni: users.filter((user) => user.role === 'alumni').length,
     projects: projects.length
   }), [projects.length, users]);
@@ -441,7 +441,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const sendConnectionRequest = (userId: string) => {
     const targetUser = users.find((user) => user.id === userId);
     if (!targetUser || !isUuid(userId)) {
-      showToast('This demo profile cannot receive a request yet. Ask the member to register first.');
+      showToast('This profile is not available for connection requests yet.');
       return;
     }
     const workflowItem: WorkflowItem = {
@@ -461,7 +461,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const submitMentorshipRequest = (request: { mentorId: string; topic: string; goals: string; preferredFrequency: string }) => {
     const mentor = users.find((user) => user.id === request.mentorId);
     if (!mentor || !isUuid(request.mentorId)) {
-      showToast('This demo profile cannot receive a request yet. Ask the mentor to register first.');
+      showToast('This profile is not available for mentorship requests yet.');
       return;
     }
     const workflowItem: WorkflowItem = {
@@ -531,7 +531,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       category: (ann.category as any) || 'General',
       description: ann.description,
       isPinned: !!ann.isPinned,
-      author: ann.author || 'IRE Admin Desk',
+      author: ann.author || currentUser.name,
       date: ann.date || 'Just now'
     };
     const ok = await persistContent('announcement', newAnn);
@@ -1227,21 +1227,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   );
 };
 
-const isCountedStudent = (user: User): boolean => {
-  const values = [user.batch, user.graduationYear].filter((value): value is string | number => value !== undefined && value !== null);
-  return values.some((value) => {
-    const text = String(value);
-    const batchMatch = text.match(/batch\s*(\d+)/i);
-    const numericBatch = /^\s*\d{1,2}\s*$/.test(text) ? Number(text) : null;
-    const yearMatch = text.match(/\b(20\d{2})\b/);
-    return Boolean(
-      (batchMatch && Number(batchMatch[1]) >= 9) ||
-      (numericBatch !== null && numericBatch >= 9) ||
-      (yearMatch && Number(yearMatch[1]) >= 2031)
-    );
-  });
-};
-
 const profileRowToDirectoryUser = (profile: Record<string, unknown>): User => {
   const name = typeof profile.full_name === 'string' ? profile.full_name : 'IRE Member';
   const role = profile.role === 'alumni' || profile.role === 'faculty' || profile.role === 'former_faculty' || profile.role === 'admin' ? profile.role : 'student';
@@ -1293,11 +1278,11 @@ const workflowToModerationReports = (items: WorkflowItem[]): ModerationReport[] 
     id: item.id,
     contentId: String(item.data.contentId || ''),
     contentType: (item.data.contentType || 'Article') as ModerationReport['contentType'],
-    contentTitle: String(item.data.contentTitle || 'Flagged Record'),
-    reason: (item.data.reason || 'Spam') as ModerationReport['reason'],
-    reportedBy: String(item.data.reportedBy || 'Department User'),
+    contentTitle: String(item.data.contentTitle || 'Untitled content'),
+    reason: (item.data.reason || 'Other') as ModerationReport['reason'],
+    reportedBy: String(item.data.reportedBy || 'Unknown member'),
     reporterAvatar: typeof item.data.reporterAvatar === 'string' ? item.data.reporterAvatar : undefined,
-    date: String(item.data.date || item.created_at || 'Recent'),
+    date: String(item.data.date || item.created_at || 'Date unavailable'),
     status: 'Under Review',
     details: typeof item.data.details === 'string' ? item.data.details : undefined
   }));

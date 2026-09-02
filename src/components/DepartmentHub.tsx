@@ -342,7 +342,7 @@ export const DepartmentHub: React.FC = () => {
             </h2>
             <div className="space-y-2 text-xs md:text-sm text-slate-700 leading-relaxed">
               <p>
-                Founded in 2018, the Department of Internet of Things and Robotics Engineering (IRE) was established to pioneer interdisciplinary education bridging mechatronics, embedded sensors, distributed systems, and real-time artificial intelligence.
+                Department origins and mission information are maintained by authorized administrators.
               </p>
               <p>
                 The department network grows with every verified member and published project, alongside its research labs and academic community.
@@ -353,22 +353,7 @@ export const DepartmentHub: React.FC = () => {
             <div className="pt-4 border-t border-slate-100 space-y-3">
               <h3 className="font-heading text-xs font-bold text-slate-900 uppercase tracking-wider">Departmental Milestones</h3>
               <div className="space-y-3 relative before:absolute before:left-2.5 before:top-1.5 before:bottom-1.5 before:w-0.5 before:bg-slate-200">
-                {milestones.map((milestone) => <div key={`${milestone.year}-${milestone.title}`} className="pl-7 relative"><div className="w-2 h-2 rounded-full bg-blue-600 absolute left-[7px] top-1 ring-3 ring-white"></div><h4 className="font-bold text-xs text-slate-900">{milestone.year} — {milestone.title}</h4><p className="text-xs text-slate-500">{milestone.description}</p></div>)}
-                <div className="pl-7 relative">
-                  <div className="w-2 h-2 rounded-full bg-blue-600 absolute left-[7px] top-1 ring-3 ring-white"></div>
-                  <h4 className="font-bold text-xs text-slate-900">2018 — Founding Inception</h4>
-                  <p className="text-xs text-slate-500">IRE Department inaugurated with 60 inaugural undergraduate engineers.</p>
-                </div>
-                <div className="pl-7 relative">
-                  <div className="w-2 h-2 rounded-full bg-blue-600 absolute left-[7px] top-1 ring-3 ring-white"></div>
-                  <h4 className="font-bold text-xs text-slate-900">2021 — Autonomous Vehicle &amp; ROS2 Lab Opening</h4>
-                  <p className="text-xs text-slate-500">Commissioning of 1,500 sq.ft indoor flight cages and sensor calibration benches.</p>
-                </div>
-                <div className="pl-7 relative">
-                  <div className="w-2 h-2 rounded-full bg-blue-600 absolute left-[7px] top-1 ring-3 ring-white"></div>
-                  <h4 className="font-bold text-xs text-slate-900">2026 — Private IREConnect Digital Network Launch</h4>
-                  <p className="text-xs text-slate-500">{networkStats.alumni + networkStats.students}+ students and alumni in the department community.</p>
-                </div>
+                {milestones.length > 0 ? milestones.map((milestone) => <div key={`${milestone.year}-${milestone.title}`} className="pl-7 relative"><div className="w-2 h-2 rounded-full bg-blue-600 absolute left-[7px] top-1 ring-3 ring-white"></div><h4 className="font-bold text-xs text-slate-900">{milestone.year} — {milestone.title}</h4><p className="text-xs text-slate-500">{milestone.description}</p></div>) : <p className="pl-7 text-xs text-slate-500">No milestones have been added yet.</p>}
               </div>
             </div>
           </section>

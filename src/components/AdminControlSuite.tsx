@@ -41,7 +41,7 @@ export const AdminControlSuite: React.FC = () => {
         category: broadcastCategory as any,
         description: broadcastDescription,
         isPinned: broadcastIsPinned,
-        author: 'IRE Admin Desk'
+        author: currentUser.name
       });
     }
 
@@ -137,13 +137,13 @@ export const AdminControlSuite: React.FC = () => {
 
           {pendingQueue.length > 0 ? (
             pendingQueue.map((item: any) => {
-              const userName = item.userName || item.user?.name || 'Academic User';
+              const userName = item.userName || item.user?.name || 'User';
               const userAvatar = item.avatar || item.user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=64748b&color=fff`;
               const userEmail = item.email || item.user?.email || 'user@university.edu';
               const requestedRole = item.requestedRole || item.user?.role || 'student';
-              const batch = item.batch || item.user?.batch || 'Batch 7';
-              const submissionDate = item.submissionDate || item.submittedAt || 'Recent';
-              const idOrProgram = item.studentIdOrEmployeeId || item.degreeProgram || 'ID: 2026-IRE';
+              const batch = item.batch || item.user?.batch || 'Not provided';
+              const submissionDate = item.submissionDate || item.submittedAt || 'Date unavailable';
+              const idOrProgram = item.studentIdOrEmployeeId || item.degreeProgram || 'Not provided';
               const docUrl = item.documentUrl || item.evidenceDocUrl;
 
               return (
@@ -221,11 +221,11 @@ export const AdminControlSuite: React.FC = () => {
         <div className="space-y-3">
           {activeReports.length > 0 ? (
             activeReports.map((item: any) => {
-              const itemTitle = item.title || item.contentTitle || 'Flagged Record';
+              const itemTitle = item.title || item.contentTitle || 'Untitled content';
               const itemType = item.type || item.contentType || 'Content';
-              const timestamp = item.timestamp || item.date || 'Recent';
-              const reason = item.reason || 'Safety Policy Audit';
-              const reportedBy = item.reportedBy || 'Department User';
+              const timestamp = item.timestamp || item.date || 'Date unavailable';
+              const reason = item.reason || 'No reason provided';
+              const reportedBy = item.reportedBy || 'Unknown member';
 
               return (
                 <div
@@ -350,66 +350,17 @@ export const AdminControlSuite: React.FC = () => {
             <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-0.5 shadow-2xs">
               <span className="text-[10px] font-bold uppercase text-slate-500 font-mono">Verified Students</span>
               <p className="text-xl md:text-2xl font-extrabold font-mono text-slate-900">{networkStats.students}</p>
-              <span className="text-[10px] text-emerald-600 font-bold">+18% this semester</span>
             </div>
             <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-0.5 shadow-2xs">
               <span className="text-[10px] font-bold uppercase text-slate-500 font-mono">Alumni Enrolled</span>
               <p className="text-xl md:text-2xl font-extrabold font-mono text-slate-900">{networkStats.alumni}</p>
-              <span className="text-[10px] text-blue-600 font-bold">Across 42 Countries</span>
             </div>
             <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-0.5 shadow-2xs">
               <span className="text-[10px] font-bold uppercase text-slate-500 font-mono">Active Projects</span>
               <p className="text-xl md:text-2xl font-extrabold font-mono text-slate-900">{networkStats.projects}</p>
-              <span className="text-[10px] text-emerald-600 font-bold">89 IEEE published</span>
-            </div>
-            <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-0.5 shadow-2xs">
-              <span className="text-[10px] font-bold uppercase text-slate-500 font-mono">Mentorship Hours</span>
-              <p className="text-xl md:text-2xl font-extrabold font-mono text-slate-900">Available soon</p>
-              <span className="text-[10px] text-amber-600 font-bold">Mentoring records</span>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-2xs space-y-3">
-            <h3 className="font-heading text-xs md:text-sm font-bold text-slate-900">Department Discipline Breakdown</h3>
-            <div className="space-y-2.5 pt-1">
-              <div>
-                <div className="flex justify-between text-xs font-semibold text-slate-800 mb-1">
-                  <span>Autonomous Robotics &amp; ROS2</span>
-                  <span className="font-mono">42%</span>
-                </div>
-                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-blue-600 rounded-full" style={{ width: '42%' }}></div>
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between text-xs font-semibold text-slate-800 mb-1">
-                  <span>Industrial IoT &amp; Embedded Edge Sensors</span>
-                  <span className="font-mono">28%</span>
-                </div>
-                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-indigo-600 rounded-full" style={{ width: '28%' }}></div>
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between text-xs font-semibold text-slate-800 mb-1">
-                  <span>Computer Vision &amp; SLAM</span>
-                  <span className="font-mono">18%</span>
-                </div>
-                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-cyan-600 rounded-full" style={{ width: '18%' }}></div>
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between text-xs font-semibold text-slate-800 mb-1">
-                  <span>Swarm UAVs &amp; Mechatronics</span>
-                  <span className="font-mono">12%</span>
-                </div>
-                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-sky-500 rounded-full" style={{ width: '12%' }}></div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       )}
     </div>

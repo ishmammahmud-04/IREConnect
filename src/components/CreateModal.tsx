@@ -188,14 +188,14 @@ export const CreateModal: React.FC = () => {
       const projectItem = {
         ...sharedBase,
         category: (category as any) || 'Robotics',
-        batch: currentUser.batch || 'Batch 7',
+        batch: currentUser.batch || '',
         year: String(new Date().getFullYear()),
         problem: 'Need to solve a relevant real-world challenge in the department ecosystem.',
         solution: desc,
         description: desc,
         technologies: tagArray.length ? tagArray : ['ROS2', 'Python', 'SLAM'],
         supervisor: {
-          id: currentUser.id || 'faculty-1',
+          id: currentUser.id,
           name: supervisorName || currentUser.name || 'Faculty Advisor',
           designation: currentUser.headline || 'Department Member',
           avatar: currentUser.avatar || ''

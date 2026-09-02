@@ -175,11 +175,7 @@ export const FacultyProfileView: React.FC<FacultyProfileViewProps> = ({ facultyU
             </h2>
 
             <div className="space-y-2">
-              {(facultyUser.coursesTaught || [
-                { code: 'IRE-301', name: 'Intro to Robotics & Actuators', term: 'Fall 2024', level: 'UG' },
-                { code: 'IRE-540', name: 'Ethics in AI & Autonomy', term: 'Spring 2024', level: 'PG' },
-                { code: 'IRE-601', name: 'Advanced Machine Learning & SLAM', term: 'Fall 2023', level: 'PG' }
-              ]).map((course) => (
+              {(facultyUser.coursesTaught || []).map((course) => (
                 <div
                   key={course.code}
                   className="p-3 rounded-lg bg-slate-50 border border-slate-200 hover:border-blue-500 transition-colors"
@@ -195,6 +191,7 @@ export const FacultyProfileView: React.FC<FacultyProfileViewProps> = ({ facultyU
                   </p>
                 </div>
               ))}
+              {!facultyUser.coursesTaught?.length && <p className="text-xs text-slate-500">No courses have been added yet.</p>}
             </div>
           </section>
 

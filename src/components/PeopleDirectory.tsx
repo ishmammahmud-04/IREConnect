@@ -63,6 +63,7 @@ export const PeopleDirectory: React.FC = () => {
 
     return true;
   });
+  const batchOptions = Array.from(new Set((users || []).map((user) => user.batch).filter(Boolean))).sort();
 
   return (
     <div className="space-y-4 animate-in fade-in duration-300">
@@ -188,46 +189,19 @@ export const PeopleDirectory: React.FC = () => {
               >
                 All Batches
               </button>
-              <button
-                onClick={() => setSelectedBatchFilter('Batch 7')}
-                className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${
-                  selectedBatchFilter === 'Batch 7'
-                    ? 'bg-slate-900 text-white border-slate-900'
-                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                }`}
-              >
-                Batch 7 (2026)
-              </button>
-              <button
-                onClick={() => setSelectedBatchFilter('Batch 6')}
-                className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${
-                  selectedBatchFilter === 'Batch 6'
-                    ? 'bg-slate-900 text-white border-slate-900'
-                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                }`}
-              >
-                Batch 6 (2025)
-              </button>
-              <button
-                onClick={() => setSelectedBatchFilter('Batch 3')}
-                className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${
-                  selectedBatchFilter === 'Batch 3'
-                    ? 'bg-slate-900 text-white border-slate-900'
-                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                }`}
-              >
-                Batch 3 (2021)
-              </button>
-              <button
-                onClick={() => setSelectedBatchFilter('Batch 2')}
-                className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${
-                  selectedBatchFilter === 'Batch 2'
-                    ? 'bg-slate-900 text-white border-slate-900'
-                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                }`}
-              >
-                Batch 2 (2020)
-              </button>
+              {batchOptions.map((batch) => (
+                <button
+                  key={batch}
+                  onClick={() => setSelectedBatchFilter(batch)}
+                  className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${
+                    selectedBatchFilter === batch
+                      ? 'bg-slate-900 text-white border-slate-900'
+                      : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  {batch}
+                </button>
+              ))}
             </>
           )}
         </div>
