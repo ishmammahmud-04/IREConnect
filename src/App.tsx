@@ -26,6 +26,7 @@ import { SavedBookmarksModal } from './components/SavedBookmarksModal';
 import { NotificationsModal } from './components/NotificationsModal';
 import { ChatModal } from './components/ChatModal';
 import { AuthScreen } from './components/AuthScreen';
+import { AdminControlSuite } from './components/AdminControlSuite';
 import { supabase } from './lib/supabase';
 import { AppNotification, User } from './types';
 
@@ -38,7 +39,8 @@ const getRouteState = (pathname: string) => {
    '/opportunities': 'opportunities',
    '/department': 'department',
    '/profile': 'profile',
-   '/admin': 'admin'
+   '/admin': 'admin',
+   '/admindashboard': 'admin'
   };
 
   if (normalizedPath.startsWith('/profile/')) {
@@ -224,7 +226,7 @@ const MainContent: React.FC = () => {
       opportunities: '/opportunities',
       department: '/department',
       profile: '/profile',
-      admin: '/admin'
+      admin: '/admindashboard'
     };
 
     // If a user profile is selected from any screen, show that user's profile
@@ -257,6 +259,8 @@ const MainContent: React.FC = () => {
         return <DepartmentHub />;
       case 'profile':
         return <ProfileView />;
+      case 'admin':
+        return currentUser.role === 'admin' ? <AdminControlSuite /> : <HomeDashboard />;
       default:
         return <HomeDashboard />;
     }
@@ -347,11 +351,14 @@ const AuthGate: React.FC = () => {
       supabase.from('saved_items').select('item_id').eq('user_id', session.user.id),
       supabase.from('content_items').select('*').order('created_at', { ascending: false }),
       supabase.from('profiles').select('*'),
-      supabase.from('workflow_items').select('*').order('created_at', { ascending: false })
-    ]).then(([profileResult, notificationResult, savedItemResult, contentResult, directoryResult, workflowResult]) => {
+      supabase.from('workflow_items').select('*').order('created_at', { ascending: false }),
+      supabase.from('admin_users').select('user_id').eq('user_id', session.user.id).eq('status', 'active').maybeSingle()
+    ]).then(([profileResult, notificationResult, savedItemResult, contentResult, directoryResult, workflowResult, adminResult]) => {
       if (profileResult.error) return;
+      const hasAdminAccess = !adminResult.error && Boolean(adminResult.data);
+      const loadedUser = profileResult.data ? profileRowToUser(profileResult.data, fallbackUser, hasAdminAccess) : fallbackUser;
       hydratePersistedAccount({
-        user: profileResult.data ? profileRowToUser(profileResult.data, fallbackUser) : fallbackUser,
+        user: hasAdminAccess ? { ...loadedUser, role: 'admin', verificationStatus: 'Admin' } : loadedUser,
         notifications: notificationResult.error ? [] : notificationResult.data.map(notificationRowToAppNotification),
         savedItemIds: savedItemResult.error ? [] : savedItemResult.data.map((item) => item.item_id)
       });
@@ -390,11 +397,11 @@ const AuthGate: React.FC = () => {
   return <MainContent />;
 };
 
-const profileRowToUser = (profile: Record<string, unknown>, fallback: User): User => ({
+const profileRowToUser = (profile: Record<string, unknown>, fallback: User, isAdmin = false): User => ({
   ...fallback,
   name: typeof profile.full_name === 'string' ? profile.full_name : fallback.name,
-  role: profile.role === 'admin' || profile.role === 'alumni' || profile.role === 'faculty' ? profile.role : 'student',
-  verificationStatus: profile.role === 'alumni' ? 'Verified Alumni' : profile.role === 'faculty' ? 'Verified Faculty' : 'Verified Student',
+  role: isAdmin ? 'admin' : profile.role === 'alumni' || profile.role === 'faculty' ? profile.role : 'student',
+  verificationStatus: isAdmin ? 'Admin' : profile.role === 'alumni' ? 'Verified Alumni' : profile.role === 'faculty' ? 'Verified Faculty' : 'Verified Student',
   avatar: typeof profile.avatar_url === 'string' && profile.avatar_url ? profile.avatar_url : fallback.avatar,
   bannerUrl: typeof profile.banner_url === 'string' && profile.banner_url ? profile.banner_url : fallback.bannerUrl,
   avatarPath: typeof profile.avatar_path === 'string' ? profile.avatar_path : fallback.avatarPath,

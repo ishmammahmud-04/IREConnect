@@ -18,17 +18,17 @@ export const AdminControlSuite: React.FC = () => {
     networkStats
   } = useApp();
 
-  if (currentUser.role !== 'admin') return null;
-
-  const activeQueue = adminVerificationQueue.length > 0 ? adminVerificationQueue : verificationRequests;
-  const activeReports = flaggedItems.length > 0 ? flaggedItems : moderationReports;
-  const pendingQueue = activeQueue.filter((item) => (item.status || 'Pending') === 'Pending');
-
   const [adminTab, setAdminTab] = useState<'verification' | 'moderation' | 'broadcast' | 'analytics'>('verification');
   const [broadcastTitle, setBroadcastTitle] = useState('');
   const [broadcastCategory, setBroadcastCategory] = useState('General');
   const [broadcastDescription, setBroadcastDescription] = useState('');
   const [broadcastIsPinned, setBroadcastIsPinned] = useState(false);
+
+  if (currentUser.role !== 'admin') return null;
+
+  const activeQueue = adminVerificationQueue.length > 0 ? adminVerificationQueue : verificationRequests;
+  const activeReports = flaggedItems.length > 0 ? flaggedItems : moderationReports;
+  const pendingQueue = activeQueue.filter((item) => (item.status || 'Pending') === 'Pending');
 
   const handlePublishBroadcast = (e: React.FormEvent) => {
     e.preventDefault();

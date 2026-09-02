@@ -264,7 +264,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     opportunities: '/opportunities',
     department: '/department',
     profile: '/profile',
-    admin: '/admin'
+    admin: '/admindashboard'
   };
 
   const setCurrentTab = useCallback((tab: MainTab) => {
@@ -291,7 +291,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       '/opportunities': 'opportunities',
       '/department': 'department',
       '/profile': 'profile',
-      '/admin': 'admin'
+      '/admin': 'admin',
+      '/admindashboard': 'admin'
     };
     setCurrentTabState(routeMap[normalizedPath] || 'home');
   }, []);

@@ -22,8 +22,13 @@ Deno.serve(async (request) => {
     if (userError || !user) return json({ error: 'Invalid session.' }, 401);
 
     const adminClient = createClient(supabaseUrl, serviceKey);
-    const { data: profile } = await adminClient.from('profiles').select('role').eq('user_id', user.id).single();
-    if (profile?.role !== 'admin') return json({ error: 'Administrator access required.' }, 403);
+    const { data: adminUser, error: adminError } = await adminClient
+      .from('admin_users')
+      .select('user_id')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .maybeSingle();
+    if (adminError || !adminUser) return json({ error: 'Administrator access required.' }, 403);
 
     const body = await request.json() as { action: Action; workflowId?: string; title?: string; description?: string; category?: string; isPinned?: string };
     if (!body.action) return json({ error: 'Action is required.' }, 400);
@@ -33,6 +38,13 @@ Deno.serve(async (request) => {
       const announcement = { id: crypto.randomUUID(), title: body.title.trim(), description: body.description.trim(), category: body.category || 'General', isPinned: body.isPinned === 'true', author: 'IRE Admin Desk', date: 'Just now' };
       const { error } = await adminClient.from('content_items').insert({ id: announcement.id, owner_id: user.id, content_type: 'announcement', data: announcement });
       if (error) return json({ error: error.message }, 400);
+      await adminClient.from('admin_audit_logs').insert({
+        admin_id: user.id,
+        action: 'PUBLISHED_ANNOUNCEMENT',
+        target_type: 'announcement',
+        target_id: announcement.id,
+        metadata: { title: announcement.title }
+      });
       return json({ ok: true, announcement });
     }
 
@@ -47,17 +59,42 @@ Deno.serve(async (request) => {
       await adminClient.from('workflow_items').update({ status, updated_at: new Date().toISOString() }).eq('id', body.workflowId);
       await adminClient.from('profiles').update({ verification_status: verificationStatus, updated_at: new Date().toISOString() }).eq('user_id', workflow.requester_id);
       await adminClient.from('notifications').insert({ user_id: workflow.requester_id, title: body.action === 'verify_user' ? 'Identity verified' : 'Verification update', message: body.action === 'verify_user' ? 'Your account has been verified.' : 'Your verification request was rejected.', notification_type: 'verification' });
+      await adminClient.from('admin_audit_logs').insert({
+        admin_id: user.id,
+        action: body.action === 'verify_user' ? 'APPROVED_USER' : 'REJECTED_USER',
+        target_type: 'user',
+        target_id: workflow.requester_id,
+        metadata: { workflowId: body.workflowId }
+      });
       return json({ ok: true });
     }
 
     if (workflow.workflow_type !== 'moderation_report') return json({ error: 'Invalid moderation workflow.' }, 400);
     if (body.action === 'remove_content') {
       const contentId = typeof workflow.data?.contentId === 'string' ? workflow.data.contentId : null;
-      if (contentId) await adminClient.from('content_items').delete().eq('id', contentId);
+      if (contentId) {
+        const { data: content } = await adminClient.from('content_items').select('data').eq('id', contentId).maybeSingle();
+        if (content) {
+          const data = {
+            ...(content.data as Record<string, unknown>),
+            status: 'removed',
+            removedAt: new Date().toISOString(),
+            removedBy: user.id
+          };
+          await adminClient.from('content_items').update({ data, updated_at: new Date().toISOString() }).eq('id', contentId);
+        }
+      }
     }
     const status = body.action === 'remove_content' ? 'dismissed' : 'resolved';
     const { error } = await adminClient.from('workflow_items').update({ status, updated_at: new Date().toISOString() }).eq('id', body.workflowId);
     if (error) return json({ error: error.message }, 400);
+    await adminClient.from('admin_audit_logs').insert({
+      admin_id: user.id,
+      action: body.action === 'remove_content' ? 'REMOVED_POST' : 'RESOLVED_REPORT',
+      target_type: 'moderation_report',
+      target_id: body.workflowId,
+      metadata: { action: body.action }
+    });
     return json({ ok: true });
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : 'Unexpected server error.' }, 500);
