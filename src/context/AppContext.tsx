@@ -36,6 +36,7 @@ interface AppContextType {
   announcements: Announcement[];
   events: DepartmentEvent[];
   toggleEventRsvp: (eventId: string) => void;
+  createDepartmentEvent: (event: DepartmentEvent) => Promise<void>;
   notifications: AppNotification[];
   directorySearchResults: User[] | null;
   searchDirectoryUsers: (query: string) => Promise<void>;
@@ -102,7 +103,7 @@ interface AppContextType {
   markNotificationAsRead: (notificationId: string) => Promise<void>;
   hydrateNotifications: (notifications: AppNotification[]) => void;
   hydratePersistedAccount: (data: { user: User; notifications: AppNotification[]; savedItemIds: string[] }) => void;
-  hydratePersistedContent: (data: { projects: Project[]; achievements: Achievement[]; publications: Publication[]; articles: Article[]; opportunities: Opportunity[]; announcements: Announcement[] }) => void;
+  hydratePersistedContent: (data: { projects: Project[]; achievements: Achievement[]; publications: Publication[]; articles: Article[]; opportunities: Opportunity[]; announcements: Announcement[]; events?: DepartmentEvent[] }) => void;
   hydrateDirectory: (users: User[]) => void;
   hydrateWorkflows: (workflows: WorkflowItem[]) => void;
   
@@ -227,6 +228,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (event) {
       showToast(event.isUserRsvped ? `RSVP cancelled for ${event.title}.` : `RSVP confirmed for ${event.title}.`);
     }
+  };
+
+  const createDepartmentEvent = async (event: DepartmentEvent) => {
+    const ok = await persistContent('event', event);
+    if (!ok) return;
+    setEvents((previous) => [event, ...previous.filter((existing) => existing.id !== event.id)]);
+    showToast(`Event "${event.title}" added to the department calendar.`);
   };
 
   const searchDirectoryUsers = async (query: string) => {
@@ -368,7 +376,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }, 3200);
   };
 
+  const confirmAction = (message: string) => {
+    if (typeof window === 'undefined' || typeof window.confirm !== 'function') {
+      return true;
+    }
+    return window.confirm(message);
+  };
+
   const updateWorkflowStatus = async (workflowId: string, status: string, successMessage: string, errorMessage: string) => {
+    if (!confirmAction('Are you sure you want to update this request?')) {
+      return;
+    }
     const { error } = await supabase.from('workflow_items').update({ status, updated_at: new Date().toISOString() }).eq('id', workflowId);
     if (error) {
       showToast(errorMessage);
@@ -630,24 +648,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateUserPrivacy = (settings: User['privacy']) => {
+    if (!confirmAction('Are you sure you want to save these privacy changes?')) {
+      return;
+    }
     setCurrentUser((prev) => ({ ...prev, privacy: settings }));
     void supabase.from('profiles').update({ privacy: settings, updated_at: new Date().toISOString() }).eq('user_id', currentUser.id);
     showToast('Privacy settings updated successfully');
   };
 
   const updateNotificationSettings = (settings: User['notificationSettings']) => {
+    if (!confirmAction('Save these notification preferences?')) {
+      return;
+    }
     setCurrentUser((prev) => ({ ...prev, notificationSettings: settings }));
     void supabase.from('profiles').update({ notification_settings: settings, updated_at: new Date().toISOString() }).eq('user_id', currentUser.id);
     showToast('Notification preferences saved');
   };
 
   const updateProfileBio = (bio: string) => {
+    if (!confirmAction('Save this profile bio update?')) {
+      return;
+    }
     const trimmedBio = bio.trim().slice(0, 280);
     setCurrentUser((prev) => ({ ...prev, bio: trimmedBio }));
     void supabase.from('profiles').update({ bio: trimmedBio, updated_at: new Date().toISOString() }).eq('user_id', currentUser.id);
   };
 
   const updateProfileDetails = (details: { headline: string; skills: string[]; education: User['education']; experience: User['experience']; externalLinks: User['externalLinks'] }) => {
+    if (!confirmAction('Apply these profile changes?')) {
+      return;
+    }
     setCurrentUser((previous) => ({ ...previous, ...details }));
     void supabase.from('profiles').update({
       headline: details.headline.trim(),
@@ -710,6 +740,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
+    if (!confirmAction('Upload this CV and replace the current one?')) {
+      return;
+    }
+
     const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
     if (!isPdf) {
       showToast('Only PDF files are allowed for your CV.');
@@ -768,6 +802,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
+    if (!confirmAction('Delete your uploaded CV? This cannot be undone.')) {
+      return;
+    }
+
     try {
       if (currentUser.cvPath) {
         await supabase.storage.from('profile-media').remove([currentUser.cvPath]);
@@ -818,7 +856,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const hydrateNotifications = (nextNotifications: AppNotification[]) => setNotifications(nextNotifications);
   const hydrateWorkflows = (nextWorkflows: WorkflowItem[]) => setWorkflowItems(nextWorkflows);
 
-  const hydratePersistedContent = (data: { projects: Project[]; achievements: Achievement[]; publications: Publication[]; articles: Article[]; opportunities: Opportunity[]; announcements: Announcement[] }) => {
+  const hydratePersistedContent = (data: { projects: Project[]; achievements: Achievement[]; publications: Publication[]; articles: Article[]; opportunities: Opportunity[]; announcements: Announcement[]; events?: DepartmentEvent[] }) => {
     const merge = <T extends { id: string }>(existing: T[], persisted: T[]) => [...persisted, ...existing.filter((item) => !persisted.some((storedItem) => storedItem.id === item.id))];
     setProjects((previous) => merge(previous, data.projects));
     setAchievements((previous) => merge(previous, data.achievements));
@@ -826,6 +864,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setArticles((previous) => merge(previous, data.articles));
     setOpportunities((previous) => merge(previous, data.opportunities));
     setAnnouncements((previous) => merge(previous, data.announcements));
+    if (data.events) setEvents((previous) => merge(previous, data.events || []));
   };
   const hydrateDirectory = (persistedUsers: User[]) => setUsers(persistedUsers);
 
@@ -854,6 +893,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updatePublishedContent = async (contentType: 'project' | 'publication' | 'achievement' | 'article' | 'opportunity' | 'announcement', item: any) => {
+    if (!confirmAction('Save these changes to this published item?')) {
+      return false;
+    }
+
     const ok = await persistContent(contentType, item);
     if (!ok) return false;
 
@@ -880,6 +923,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deletePublishedContent = async (contentType: 'project' | 'publication' | 'achievement' | 'article' | 'opportunity' | 'announcement', id: string) => {
     if (!currentUser.id) return false;
+
+    if (!confirmAction('Delete this item? This action cannot be undone.')) {
+      return false;
+    }
 
     try {
       const { error } = await supabase.from('content_items').delete().eq('id', id).eq('owner_id', currentUser.id);
@@ -935,6 +982,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     announcements,
     events,
     toggleEventRsvp,
+    createDepartmentEvent,
     notifications,
     directorySearchResults,
     searchDirectoryUsers,
@@ -1060,6 +1108,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     announcements,
     events,
     toggleEventRsvp,
+    createDepartmentEvent,
     notifications,
     directorySearchResults,
     searchDirectoryUsers,

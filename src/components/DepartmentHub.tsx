@@ -1,21 +1,34 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { DepartmentEvent } from '../types';
 
 export const DepartmentHub: React.FC = () => {
   const {
+    currentUser,
     announcements,
     events,
+    createDepartmentEvent,
+    createAnnouncement,
     achievements,
     users,
     setSelectedAchievement,
     setSelectedUserForProfile,
     toggleEventRsvp,
     showToast,
-    networkStats
+    networkStats,
+    openCreateModalWithType
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'announcements' | 'events' | 'hall_of_fame' | 'history'>('announcements');
   const [selectedAnnouncementCategory, setSelectedAnnouncementCategory] = useState('All');
+  const [isAdding, setIsAdding] = useState(false);
+  const [formTitle, setFormTitle] = useState('');
+  const [formDescription, setFormDescription] = useState('');
+  const [formDate, setFormDate] = useState('');
+  const [formTime, setFormTime] = useState('');
+  const [formLocation, setFormLocation] = useState('');
+  const [formCategory, setFormCategory] = useState('Workshop');
+  const [milestones, setMilestones] = useState<{ year: string; title: string; description: string }[]>([]);
 
   const categories = ['All', 'Exam Notice', 'Workshop', 'Equipment', 'General'];
 
@@ -25,6 +38,28 @@ export const DepartmentHub: React.FC = () => {
   });
 
   const formerFaculty = (users || []).filter((u) => u.role === 'former_faculty');
+  const canManageDepartment = currentUser.role === 'admin';
+
+  const resetForm = () => {
+    setFormTitle(''); setFormDescription(''); setFormDate(''); setFormTime(''); setFormLocation(''); setFormCategory('Workshop'); setIsAdding(false);
+  };
+
+  const submitDepartmentItem = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!formTitle.trim() || !formDescription.trim()) return;
+    if (activeTab === 'announcements') {
+      await createAnnouncement({ title: formTitle.trim(), description: formDescription.trim(), category: formCategory as any, author: currentUser.name, date: 'Just now' });
+    } else if (activeTab === 'events') {
+      const newEvent: DepartmentEvent = {
+        id: `event-${Date.now()}`, title: formTitle.trim(), date: formDate || 'TBA', time: formTime || 'TBA', location: formLocation || 'IRE Innovation Hub', description: formDescription.trim(), organizer: currentUser.name, coverImage: '', isUpcoming: true, category: formCategory, participantsCount: 0, attendeesAvatars: [], attendeesCount: 0, isUserRsvped: false
+      };
+      await createDepartmentEvent(newEvent);
+    } else {
+      setMilestones((previous) => [{ year: formDate || String(new Date().getFullYear()), title: formTitle.trim(), description: formDescription.trim() }, ...previous]);
+      showToast('Department milestone added.');
+    }
+    resetForm();
+  };
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto animate-in fade-in duration-300 pb-16">
@@ -40,6 +75,33 @@ export const DepartmentHub: React.FC = () => {
           Notices, events, department history, and student achievements.
         </p>
       </div>
+
+      {canManageDepartment && (activeTab === 'announcements' || activeTab === 'events' || activeTab === 'history') && (
+        <div className="flex justify-end">
+          <button type="button" onClick={() => setIsAdding((value) => !value)} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3.5 py-2 text-xs font-bold text-white hover:bg-slate-800">
+            <span className="material-symbols-outlined text-[16px]">add</span>
+            <span>{isAdding ? 'Close editor' : activeTab === 'history' ? 'Add milestone' : activeTab === 'events' ? 'Add event or workshop' : 'Add announcement'}</span>
+          </button>
+        </div>
+      )}
+
+      {canManageDepartment && activeTab === 'hall_of_fame' && (
+        <div className="flex justify-end">
+          <button type="button" onClick={() => openCreateModalWithType('achievement')} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3.5 py-2 text-xs font-bold text-white hover:bg-slate-800">
+            <span className="material-symbols-outlined text-[16px]">add</span><span>Add Hall of Fame entry</span>
+          </button>
+        </div>
+      )}
+
+      {isAdding && canManageDepartment && (
+        <form onSubmit={submitDepartmentItem} className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
+          <input required value={formTitle} onChange={(event) => setFormTitle(event.target.value)} placeholder={activeTab === 'history' ? 'Milestone title' : activeTab === 'events' ? 'Event or workshop title' : 'Announcement title'} className="h-9 w-full rounded-lg border border-slate-200 px-3 text-xs outline-none focus:border-blue-600" />
+          <textarea required rows={3} value={formDescription} onChange={(event) => setFormDescription(event.target.value)} placeholder="Description" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs outline-none focus:border-blue-600" />
+          {activeTab === 'events' && <div className="grid grid-cols-1 gap-2 sm:grid-cols-3"><input value={formDate} onChange={(event) => setFormDate(event.target.value)} placeholder="Date, e.g. 18 Sep" className="rounded-lg border border-slate-200 px-3 py-2 text-xs" /><input value={formTime} onChange={(event) => setFormTime(event.target.value)} placeholder="Time" className="rounded-lg border border-slate-200 px-3 py-2 text-xs" /><input value={formLocation} onChange={(event) => setFormLocation(event.target.value)} placeholder="Location" className="rounded-lg border border-slate-200 px-3 py-2 text-xs" /></div>}
+          {(activeTab === 'announcements' || activeTab === 'events') && <select value={formCategory} onChange={(event) => setFormCategory(event.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-xs"><option>Workshop</option><option>General</option><option>Exam Notice</option><option>Equipment</option><option>Competition</option></select>}
+          <div className="flex justify-end"><button type="submit" className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700">Publish</button></div>
+        </form>
+      )}
 
       {/* Tabs */}
       <div className="flex border-b border-slate-200 overflow-x-auto no-scrollbar gap-1">
@@ -291,6 +353,7 @@ export const DepartmentHub: React.FC = () => {
             <div className="pt-4 border-t border-slate-100 space-y-3">
               <h3 className="font-heading text-xs font-bold text-slate-900 uppercase tracking-wider">Departmental Milestones</h3>
               <div className="space-y-3 relative before:absolute before:left-2.5 before:top-1.5 before:bottom-1.5 before:w-0.5 before:bg-slate-200">
+                {milestones.map((milestone) => <div key={`${milestone.year}-${milestone.title}`} className="pl-7 relative"><div className="w-2 h-2 rounded-full bg-blue-600 absolute left-[7px] top-1 ring-3 ring-white"></div><h4 className="font-bold text-xs text-slate-900">{milestone.year} — {milestone.title}</h4><p className="text-xs text-slate-500">{milestone.description}</p></div>)}
                 <div className="pl-7 relative">
                   <div className="w-2 h-2 rounded-full bg-blue-600 absolute left-[7px] top-1 ring-3 ring-white"></div>
                   <h4 className="font-bold text-xs text-slate-900">2018 — Founding Inception</h4>

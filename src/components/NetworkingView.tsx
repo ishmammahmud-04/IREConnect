@@ -27,6 +27,9 @@ export const NetworkingView: React.FC = () => {
   const [mentorshipTopic, setMentorshipTopic] = useState('All Topics');
   const [networkSearchQuery, setNetworkSearchQuery] = useState('');
   const [mentorSearchQuery, setMentorSearchQuery] = useState('');
+  const [networkRoleFilter, setNetworkRoleFilter] = useState('All');
+  const [networkBatchFilter, setNetworkBatchFilter] = useState('All');
+  const [networkGraduationYear, setNetworkGraduationYear] = useState('All');
   const [isAvailableToggle, setIsAvailableToggle] = useState(currentUser.isAvailableForMentorship || false);
 
   const activeSearchQuery = activeTab === 'mentorship' ? mentorSearchQuery : networkSearchQuery;
@@ -67,9 +70,15 @@ export const NetworkingView: React.FC = () => {
   const connectionList = getConnectionUsers('connected');
   const pendingOutgoing = getConnectionUsers('pending', 'outgoing');
   const suggestedPeople = users.filter((u) => u.id !== currentUser.id && getConnectionStatus(u.id) === 'none');
-  const searchedPeople = (directorySearchResults || users).filter((u) => u.id !== currentUser.id);
+  const matchesPeopleFilters = (person: User) => {
+    if (networkRoleFilter !== 'All' && person.role !== networkRoleFilter) return false;
+    if (networkBatchFilter !== 'All' && person.batch !== networkBatchFilter) return false;
+    if (networkGraduationYear !== 'All' && String(person.graduationYear || person.batch || '') !== networkGraduationYear) return false;
+    return true;
+  };
+  const searchedPeople = (directorySearchResults || users).filter((u) => u.id !== currentUser.id && matchesPeopleFilters(u));
   const displayedPeople = networkSearchQuery.trim() ? searchedPeople : suggestedPeople;
-  const searchedMentors = (directorySearchResults || users).filter((u) => u.isAvailableForMentorship || u.role === 'faculty' || u.role === 'alumni');
+  const searchedMentors = (directorySearchResults || users).filter((u) => (u.isAvailableForMentorship || u.role === 'faculty' || u.role === 'alumni') && matchesPeopleFilters(u));
   const displayedMentors = mentorSearchQuery.trim() ? searchedMentors.filter((mentor) => filteredMentors.some((item) => item.id === mentor.id)) : filteredMentors;
 
   return (
@@ -121,6 +130,11 @@ export const NetworkingView: React.FC = () => {
               placeholder="Search everyone by name, role, skill, or location..."
               className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-xs text-slate-900 outline-none transition-all focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
             />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <select value={networkRoleFilter} onChange={(event) => setNetworkRoleFilter(event.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"><option value="All">All roles</option><option value="student">Students</option><option value="alumni">Alumni</option><option value="faculty">Faculty</option></select>
+            <select value={networkBatchFilter} onChange={(event) => setNetworkBatchFilter(event.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"><option value="All">All batches</option>{Array.from(new Set((users || []).map((user) => user.batch).filter(Boolean))).sort().map((batch) => <option key={batch} value={batch}>{batch}</option>)}</select>
+            <select value={networkGraduationYear} onChange={(event) => setNetworkGraduationYear(event.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"><option value="All">All graduation years</option>{Array.from(new Set((users || []).map((user) => String(user.graduationYear || user.batch || '')).filter(Boolean))).sort().map((year) => <option key={year} value={year}>{year}</option>)}</select>
           </div>
           {/* People You May Know */}
           <section className="space-y-2.5">
@@ -334,6 +348,7 @@ export const NetworkingView: React.FC = () => {
               className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-xs text-slate-900 outline-none transition-all focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
             />
           </div>
+          <div className="flex flex-wrap gap-2"><select value={networkRoleFilter} onChange={(event) => setNetworkRoleFilter(event.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"><option value="All">All roles</option><option value="student">Students</option><option value="alumni">Alumni</option><option value="faculty">Faculty</option></select><select value={networkBatchFilter} onChange={(event) => setNetworkBatchFilter(event.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"><option value="All">All batches</option>{Array.from(new Set((users || []).map((user) => user.batch).filter(Boolean))).sort().map((batch) => <option key={batch} value={batch}>{batch}</option>)}</select><select value={networkGraduationYear} onChange={(event) => setNetworkGraduationYear(event.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"><option value="All">All graduation years</option>{Array.from(new Set((users || []).map((user) => String(user.graduationYear || user.batch || '')).filter(Boolean))).sort().map((year) => <option key={year} value={year}>{year}</option>)}</select></div>
           {/* Availability Switch Banner */}
           <div className="bg-white rounded-xl p-4 md:p-5 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
             <div className="space-y-0.5">

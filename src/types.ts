@@ -230,6 +230,7 @@ export interface Announcement {
 
 export interface DepartmentEvent {
   id: string;
+  ownerId?: string;
   title: string;
   date: string;
   time: string;

@@ -458,7 +458,7 @@ return next as T;
 };
 
 const contentRowsToAppData = (rows: Array<{ content_type: string; data: unknown; owner_id?: string | null }>) => {
-const result = { projects: [] as User extends never ? never[] : any[], achievements: [] as any[], publications: [] as any[], articles: [] as any[], opportunities: [] as any[], announcements: [] as any[] };
+const result = { projects: [] as User extends never ? never[] : any[], achievements: [] as any[], publications: [] as any[], articles: [] as any[], opportunities: [] as any[], announcements: [] as any[], events: [] as any[] };
 for (const row of rows) {
   if (!row.data || typeof row.data !== 'object') continue;
   const normalizedData = normalizePersistedContent(row.data as Record<string, unknown>, row.owner_id ?? null);
@@ -468,6 +468,7 @@ for (const row of rows) {
   if (row.content_type === 'article') result.articles.push(normalizedData);
   if (row.content_type === 'opportunity') result.opportunities.push(normalizedData);
   if (row.content_type === 'announcement') result.announcements.push(normalizedData);
+  if (row.content_type === 'event') result.events.push(normalizedData);
 }
 return result;
 };

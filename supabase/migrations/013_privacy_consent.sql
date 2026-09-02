@@ -21,13 +21,13 @@ begin
     case when new.raw_user_meta_data ->> 'terms_accepted' = 'true' then now() else null end,
     case when new.raw_user_meta_data ->> 'privacy_policy_accepted' = 'true' then now() else null end
   )
-  on conflict (user_id) do update
-    set full_name = excluded.full_name,
-        role = excluded.role,
-        batch = excluded.batch,
-        student_id = excluded.student_id,
-        terms_accepted_at = excluded.terms_accepted_at,
-        privacy_policy_accepted_at = excluded.privacy_policy_accepted_at;
+  on conflict (user_id) do update set
+    full_name = excluded.full_name,
+    role = excluded.role,
+    batch = excluded.batch,
+    student_id = excluded.student_id,
+    terms_accepted_at = excluded.terms_accepted_at,
+    privacy_policy_accepted_at = excluded.privacy_policy_accepted_at;
   return new;
 end;
 $$;

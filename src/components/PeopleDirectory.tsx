@@ -15,6 +15,8 @@ export const PeopleDirectory: React.FC = () => {
   const [activeSegment, setActiveSegment] = useState<'students' | 'alumni' | 'faculty'>('students');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBatchFilter, setSelectedBatchFilter] = useState('All');
+  const [selectedRoleFilter, setSelectedRoleFilter] = useState('All');
+  const [selectedGraduationYear, setSelectedGraduationYear] = useState('All');
   const [selectedSkillFilter] = useState('All');
   const [facultyStatusFilter, setFacultyStatusFilter] = useState<'all' | 'current' | 'former'>('all');
 
@@ -36,6 +38,7 @@ export const PeopleDirectory: React.FC = () => {
       if (facultyStatusFilter === 'current' && u.role !== 'faculty') return false;
       if (facultyStatusFilter === 'former' && u.role !== 'former_faculty') return false;
     }
+    if (selectedRoleFilter !== 'All' && u.role !== selectedRoleFilter) return false;
 
     // Search query
     const q = (searchQuery || '').toLowerCase();
@@ -53,6 +56,7 @@ export const PeopleDirectory: React.FC = () => {
 
     // Batch filter
     if (selectedBatchFilter !== 'All' && u.batch !== selectedBatchFilter) return false;
+    if (selectedGraduationYear !== 'All' && String(u.graduationYear || u.batch || '') !== selectedGraduationYear) return false;
 
     // Skill filter
     if (selectedSkillFilter !== 'All' && !userSkills.includes(selectedSkillFilter) && !userSpecs.includes(selectedSkillFilter)) return false;
@@ -132,6 +136,13 @@ export const PeopleDirectory: React.FC = () => {
 
         {/* Dynamic Filters Row */}
         <div className="flex gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+          <select value={selectedRoleFilter} onChange={(event) => setSelectedRoleFilter(event.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">
+            <option value="All">All roles</option><option value="student">Students</option><option value="alumni">Alumni</option><option value="faculty">Faculty</option>
+          </select>
+          <select value={selectedGraduationYear} onChange={(event) => setSelectedGraduationYear(event.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">
+            <option value="All">All years</option>
+            {Array.from(new Set((users || []).map((user) => String(user.graduationYear || user.batch || '')).filter(Boolean))).sort().map((year) => <option key={year} value={year}>{year}</option>)}
+          </select>
           {activeSegment === 'faculty' ? (
             <>
               <button
