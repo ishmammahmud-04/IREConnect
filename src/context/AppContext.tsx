@@ -126,8 +126,8 @@ interface AppContextType {
   isCreateModalOpen: boolean;
   setIsCreateModalOpen: (open: boolean) => void;
   createModalInitialType?: string;
-  createModalEditingItem?: { type: 'project' | 'publication' | 'achievement' | 'article' | 'opportunity'; item: any } | null;
-  setCreateModalEditingItem: (item: { type: 'project' | 'publication' | 'achievement' | 'article' | 'opportunity'; item: any } | null) => void;
+  createModalEditingItem?: { type: 'project' | 'publication' | 'achievement' | 'article' | 'opportunity' | 'announcement'; item: any } | null;
+  setCreateModalEditingItem: (item: { type: 'project' | 'publication' | 'achievement' | 'article' | 'opportunity' | 'announcement'; item: any } | null) => void;
   openCreateModalWithType: (type: string) => void;
   
   isLinkedInModalOpen: boolean;
@@ -200,7 +200,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createModalInitialType, setCreateModalInitialType] = useState<string>('achievement');
-  const [createModalEditingItem, setCreateModalEditingItem] = useState<{ type: 'project' | 'publication' | 'achievement' | 'article' | 'opportunity'; item: any } | null>(null);
+  const [createModalEditingItem, setCreateModalEditingItem] = useState<{ type: 'project' | 'publication' | 'achievement' | 'article' | 'opportunity' | 'announcement'; item: any } | null>(null);
   const [isLinkedInModalOpen, setIsLinkedInModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false);

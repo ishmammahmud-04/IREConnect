@@ -7,7 +7,8 @@ const contentTypeOptions = [
   { type: 'publication', label: 'Research Paper', icon: 'description' },
   { type: 'achievement', label: 'Achievement', icon: 'emoji_events' },
   { type: 'article', label: 'Technical Article', icon: 'auto_stories' },
-  { type: 'opportunity', label: 'Opportunity', icon: 'work' }
+  { type: 'opportunity', label: 'Opportunity', icon: 'work' },
+  { type: 'announcement', label: 'Announcement', icon: 'campaign' }
 ] as const;
 
 const fileToDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
@@ -26,14 +27,16 @@ export const CreateModal: React.FC = () => {
     createAchievement,
     createArticle,
     createOpportunity,
+    createAnnouncement,
     currentUser,
     showToast,
     createModalEditingItem,
+    createModalInitialType,
     setCreateModalEditingItem,
     updatePublishedContent
   } = useApp();
 
-  const [contentType, setContentType] = useState<'project' | 'publication' | 'achievement' | 'article' | 'opportunity'>('project');
+  const [contentType, setContentType] = useState<'project' | 'publication' | 'achievement' | 'article' | 'opportunity' | 'announcement'>('project');
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('Robotics');
   const [desc, setDesc] = useState('');
@@ -76,8 +79,12 @@ export const CreateModal: React.FC = () => {
       setTeamMembersText((item.teamMembers || []).map((member: any) => `${member.name}${member.role ? ` - ${member.role}` : ''}`).join('\n') || '');
       return;
     }
+    const requestedType = ['project', 'publication', 'achievement', 'article', 'opportunity', 'announcement'].includes(createModalInitialType || '')
+      ? createModalInitialType as 'project' | 'publication' | 'achievement' | 'article' | 'opportunity' | 'announcement'
+      : 'project';
+    setContentType(requestedType);
     resetForm();
-  }, [isCreateModalOpen, createModalEditingItem]);
+  }, [isCreateModalOpen, createModalEditingItem, createModalInitialType]);
 
   if (!isCreateModalOpen) return null;
 
@@ -166,7 +173,18 @@ export const CreateModal: React.FC = () => {
       ownerId: currentUser.id
     };
 
-    if (contentType === 'project') {
+    if (contentType === 'announcement') {
+      await createAnnouncement({
+        id: sharedBase.id,
+        title,
+        description: desc,
+        category: (category || 'General') as 'Competition' | 'Workshop' | 'General' | 'Exam Notice' | 'Announcement',
+        isPinned: false,
+        author: currentUser.name,
+        date: 'Just now'
+      });
+      closeModal();
+    } else if (contentType === 'project') {
       const projectItem = {
         ...sharedBase,
         category: (category as any) || 'Robotics',

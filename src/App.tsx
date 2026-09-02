@@ -393,7 +393,8 @@ const AuthGate: React.FC = () => {
   if (isLoading) return <main className="flex min-h-screen items-center justify-center bg-slate-100 text-sm font-semibold text-slate-600">Loading IRE Network…</main>;
   const isPasswordRecovery = new URLSearchParams(window.location.search).get('type') === 'recovery'
     || new URLSearchParams(window.location.hash.replace(/^#/, '')).get('type') === 'recovery';
-  if (!session || isPasswordRecovery) return <AuthScreen />;
+  const isAdminRoute = window.location.pathname === '/admindashboard' || window.location.pathname === '/admin';
+  if (!session || isPasswordRecovery) return <AuthScreen adminOnly={isAdminRoute} />;
   return <MainContent />;
 };
 

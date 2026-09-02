@@ -54,7 +54,7 @@ export const DepartmentHub: React.FC = () => {
         id: `event-${Date.now()}`, title: formTitle.trim(), date: formDate || 'TBA', time: formTime || 'TBA', location: formLocation || 'IRE Innovation Hub', description: formDescription.trim(), organizer: currentUser.name, coverImage: '', isUpcoming: true, category: formCategory, participantsCount: 0, attendeesAvatars: [], attendeesCount: 0, isUserRsvped: false
       };
       await createDepartmentEvent(newEvent);
-    } else {
+    } else if (canManageDepartment) {
       setMilestones((previous) => [{ year: formDate || String(new Date().getFullYear()), title: formTitle.trim(), description: formDescription.trim() }, ...previous]);
       showToast('Department milestone added.');
     }
@@ -76,7 +76,7 @@ export const DepartmentHub: React.FC = () => {
         </p>
       </div>
 
-      {canManageDepartment && (activeTab === 'announcements' || activeTab === 'events' || activeTab === 'history') && (
+      {((activeTab === 'announcements' || activeTab === 'events') || (canManageDepartment && activeTab === 'history')) && (
         <div className="flex justify-end">
           <button type="button" onClick={() => setIsAdding((value) => !value)} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3.5 py-2 text-xs font-bold text-white hover:bg-slate-800">
             <span className="material-symbols-outlined text-[16px]">add</span>
@@ -93,7 +93,7 @@ export const DepartmentHub: React.FC = () => {
         </div>
       )}
 
-      {isAdding && canManageDepartment && (
+      {isAdding && ((activeTab === 'announcements' || activeTab === 'events') || canManageDepartment) && (
         <form onSubmit={submitDepartmentItem} className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
           <input required value={formTitle} onChange={(event) => setFormTitle(event.target.value)} placeholder={activeTab === 'history' ? 'Milestone title' : activeTab === 'events' ? 'Event or workshop title' : 'Announcement title'} className="h-9 w-full rounded-lg border border-slate-200 px-3 text-xs outline-none focus:border-blue-600" />
           <textarea required rows={3} value={formDescription} onChange={(event) => setFormDescription(event.target.value)} placeholder="Description" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs outline-none focus:border-blue-600" />

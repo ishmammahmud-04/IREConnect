@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 
 type AuthMode = 'login' | 'register' | 'confirmation' | 'forgot' | 'recovery';
 
-export const AuthScreen: React.FC = () => {
+export const AuthScreen: React.FC<{ adminOnly?: boolean }> = ({ adminOnly = false }) => {
   const [mode, setMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -14,6 +14,12 @@ export const AuthScreen: React.FC = () => {
   const [hasAcceptedPolicies, setHasAcceptedPolicies] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (adminOnly && mode === 'register') {
+      setMode('login');
+    }
+  }, [adminOnly, mode]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -196,7 +202,7 @@ export const AuthScreen: React.FC = () => {
     <AuthLayout>
       <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-600">IRE Department Network</p>
       <h1 className="mt-2 font-heading text-2xl font-bold text-slate-900">{isRegister ? 'Create your account' : 'Welcome back'}</h1>
-      <p className="mt-2 text-sm text-slate-600">{isRegister ? 'Create an account for the department community.' : 'Sign in to continue.'}</p>
+      <p className="mt-2 text-sm text-slate-600">{isRegister ? 'Create an account for the department community.' : adminOnly ? 'Sign in with an authorized administrator account.' : 'Sign in to continue.'}</p>
 
       <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
         {isRegister && (
@@ -241,12 +247,14 @@ export const AuthScreen: React.FC = () => {
           {isSubmitting ? 'Please wait…' : isRegister ? 'Create account' : 'Sign in'}
         </button>
       </form>
-      <p className="mt-5 text-center text-xs text-slate-600">
-        {isRegister ? 'Already have an account?' : 'New to IRE Network?'}{' '}
-        <button type="button" onClick={() => { resetStatus(); setMode(isRegister ? 'login' : 'register'); }} className="font-bold text-blue-600 hover:text-blue-700">
-          {isRegister ? 'Sign in' : 'Create an account'}
-        </button>
-      </p>
+      {!adminOnly && (
+        <p className="mt-5 text-center text-xs text-slate-600">
+          {isRegister ? 'Already have an account?' : 'New to IRE Network?'}{' '}
+          <button type="button" onClick={() => { resetStatus(); setMode(isRegister ? 'login' : 'register'); }} className="font-bold text-blue-600 hover:text-blue-700">
+            {isRegister ? 'Sign in' : 'Create an account'}
+          </button>
+        </p>
+      )}
     </AuthLayout>
   );
 };
