@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Education, Experience, ExternalLinks, VisibilityLevel, PrivacySettings, NotificationSettings } from '../types';
+import { ImageCropModal } from './ImageCropModal';
 
 export const PrivacySettingsModal: React.FC = () => {
   const {
@@ -44,10 +45,15 @@ export const PrivacySettingsModal: React.FC = () => {
   const cameraVideoRef = useRef<HTMLVideoElement>(null);
   const cameraStreamRef = useRef<MediaStream | null>(null);
   const [cameraType, setCameraType] = useState<'avatar' | 'banner' | null>(null);
+  const [pendingCropImage, setPendingCropImage] = useState<{ file: File; type: 'avatar' | 'banner' } | null>(null);
+
+  const queueProfileImage = (file: File, type: 'avatar' | 'banner') => {
+    setPendingCropImage({ file, type });
+  };
 
   const handleImageSelected = async (event: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'banner') => {
     const file = event.target.files?.[0];
-    if (file) await updateProfileImage(file, type);
+    if (file) queueProfileImage(file, type);
     event.target.value = '';
   };
 
@@ -102,7 +108,7 @@ export const PrivacySettingsModal: React.FC = () => {
       showToast('Could not capture the camera image.');
       return;
     }
-    await updateProfileImage(new File([blob], `${cameraType}-${Date.now()}.jpg`, { type: 'image/jpeg' }), cameraType);
+    queueProfileImage(new File([blob], `${cameraType}-${Date.now()}.jpg`, { type: 'image/jpeg' }), cameraType);
     closeCamera();
   };
 
@@ -170,8 +176,20 @@ export const PrivacySettingsModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex justify-center items-center p-4 overflow-y-auto animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-xl border border-slate-200 shadow-2xl my-4 relative animate-in zoom-in-95 duration-200">
+    <>
+      {pendingCropImage && (
+        <ImageCropModal
+          file={pendingCropImage.file}
+          mode={pendingCropImage.type}
+          onClose={() => setPendingCropImage(null)}
+          onApply={async (croppedFile) => {
+            await updateProfileImage(croppedFile, pendingCropImage.type);
+            setPendingCropImage(null);
+          }}
+        />
+      )}
+      <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex justify-center items-center p-4 overflow-y-auto animate-in fade-in duration-200">
+        <div className="bg-white w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-xl border border-slate-200 shadow-2xl my-4 relative animate-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="sticky top-0 z-10 px-5 py-3 border-b border-slate-200 bg-white flex items-center justify-between">
           <div className="flex items-center gap-1.5">
@@ -422,8 +440,9 @@ export const PrivacySettingsModal: React.FC = () => {
             </button>
           </div>
         </form>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

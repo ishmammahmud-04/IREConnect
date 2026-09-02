@@ -172,21 +172,21 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
       )}
 
       {/* Profile Header Identity Card */}
-      <section className="bg-white rounded-xl border border-slate-200 shadow-2xs p-5 md:p-6 relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-20 bg-slate-900">
+      <section className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
+        <div className="relative h-28 md:h-36 w-full overflow-hidden bg-slate-900">
           {user.bannerUrl && (
             <button
               type="button"
               onClick={() => openImageViewer(user.bannerUrl!)}
-              className="block w-full h-full overflow-hidden"
+              className="block h-full w-full overflow-hidden focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               aria-label="View profile banner in full size"
             >
-              <img src={user.bannerUrl} alt="Profile banner" className="w-full h-full object-cover transition-transform duration-200 hover:scale-[1.02]" />
+              <img src={user.bannerUrl} alt="Profile banner" className="h-full w-full object-cover transition-transform duration-200 hover:scale-[1.02]" />
             </button>
           )}
         </div>
 
-        <div className="relative z-10 flex flex-col md:flex-row items-center md:items-end gap-5 pt-4">
+        <div className="relative z-10 flex flex-col md:flex-row items-center md:items-end gap-5 px-5 pb-5 pt-4 md:px-6">
           <div className="relative">
             <button
               type="button"

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { ImageCropModal } from './ImageCropModal';
 
 const contentTypeOptions = [
   { type: 'project', label: 'Project', icon: 'science' },
@@ -40,6 +41,7 @@ export const CreateModal: React.FC = () => {
   const [secondaryField, setSecondaryField] = useState('');
   const [publicationUrl, setPublicationUrl] = useState('');
   const [coverImage, setCoverImage] = useState('');
+  const [pendingCropCover, setPendingCropCover] = useState<File | null>(null);
   const [pdfUrl, setPdfUrl] = useState('');
   const [supervisorName, setSupervisorName] = useState('');
   const [teamMembersText, setTeamMembersText] = useState('');
@@ -101,17 +103,21 @@ export const CreateModal: React.FC = () => {
     if (!file) return;
     if (!file.type.startsWith('image/')) {
       showToast('Only standard image files are allowed. GIFs and videos are not supported.');
+      event.target.value = '';
       return;
     }
     if (['image/gif', 'image/webm', 'video/mp4', 'video/quicktime'].includes(file.type)) {
       showToast('GIFs and videos are not supported for content covers. Please upload JPG, PNG, WEBP, or BMP.');
+      event.target.value = '';
       return;
     }
+
     try {
-      const dataUrl = await fileToDataUrl(file);
-      setCoverImage(dataUrl);
+      setPendingCropCover(file);
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'Could not load the selected image.');
+    } finally {
+      event.target.value = '';
     }
   };
 
@@ -299,8 +305,21 @@ export const CreateModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex justify-center items-center p-4 overflow-y-auto animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-xl max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-xl border border-slate-200 shadow-2xl my-4 relative animate-in zoom-in-95 duration-200">
+    <>
+      {pendingCropCover && (
+        <ImageCropModal
+          file={pendingCropCover}
+          mode="cover"
+          onClose={() => setPendingCropCover(null)}
+          onApply={async (croppedFile) => {
+            const dataUrl = await fileToDataUrl(croppedFile);
+            setCoverImage(dataUrl);
+            setPendingCropCover(null);
+          }}
+        />
+      )}
+      <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex justify-center items-center p-4 overflow-y-auto animate-in fade-in duration-200">
+        <div className="bg-white w-full max-w-xl max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-xl border border-slate-200 shadow-2xl my-4 relative animate-in zoom-in-95 duration-200">
         <div className="sticky top-0 z-10 px-5 py-3 border-b border-slate-200 bg-white flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <span className="material-symbols-outlined text-blue-600 text-[18px]">add_circle</span>
@@ -401,7 +420,8 @@ export const CreateModal: React.FC = () => {
             </button>
           </div>
         </form>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
