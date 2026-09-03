@@ -247,6 +247,15 @@ export interface DepartmentEvent {
   isUserRsvped?: boolean;
 }
 
+export interface DepartmentMilestone {
+  id: string;
+  year: string;
+  title: string;
+  description: string;
+  created_at?: string;
+  owner_id?: string;
+}
+
 export interface HallOfFameEntry {
   id: string;
   title: string;

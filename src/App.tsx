@@ -349,10 +349,11 @@ const AuthGate: React.FC = () => {
       supabase.from('notifications').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false }),
       supabase.from('saved_items').select('item_id').eq('user_id', session.user.id),
       supabase.from('content_items').select('*').order('created_at', { ascending: false }),
+      supabase.from('department_milestones').select('*').order('created_at', { ascending: false }),
       supabase.from('profiles').select('*'),
       supabase.from('workflow_items').select('*').order('created_at', { ascending: false }),
       supabase.from('admin_users').select('user_id').eq('user_id', session.user.id).eq('status', 'active').maybeSingle()
-    ]).then(([profileResult, notificationResult, savedItemResult, contentResult, directoryResult, workflowResult, adminResult]) => {
+    ]).then(([profileResult, notificationResult, savedItemResult, contentResult, milestoneResult, directoryResult, workflowResult, adminResult]) => {
       if (profileResult.error) return;
       const hasAdminAccess = !adminResult.error && Boolean(adminResult.data);
       const loadedUser = profileResult.data ? profileRowToUser(profileResult.data, fallbackUser, hasAdminAccess) : fallbackUser;
@@ -362,7 +363,7 @@ const AuthGate: React.FC = () => {
         notifications: notificationResult.error ? [] : notificationResult.data.map(notificationRowToAppNotification),
         savedItemIds: savedItemResult.error ? [] : savedItemResult.data.map((item) => item.item_id)
       });
-      if (!contentResult.error) hydratePersistedContent(contentRowsToAppData(contentResult.data));
+      if (!contentResult.error) hydratePersistedContent({ ...contentRowsToAppData(contentResult.data), milestones: milestoneResult.error ? [] : milestoneResult.data });
       if (!directoryResult.error) hydrateDirectory(directoryResult.data.map(profileRowToDirectoryUser));
       if (!workflowResult.error) hydrateWorkflows(workflowResult.data as any[]);
     });

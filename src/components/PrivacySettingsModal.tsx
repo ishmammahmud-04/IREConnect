@@ -16,6 +16,7 @@ export const PrivacySettingsModal: React.FC = () => {
     updateProfileImage,
     updateProfileCV,
     deleteProfileCV,
+    deleteAccount,
     isUploadingProfileImage,
     isUploadingCV
   } = useApp();
@@ -439,10 +440,14 @@ export const PrivacySettingsModal: React.FC = () => {
               Save Privacy Settings
             </button>
           </div>
+          <div className="mt-4 border-t border-rose-100 pt-4">
+            <button type="button" onClick={() => void deleteAccount()} className="rounded-lg border border-rose-200 px-3.5 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-50">
+              Delete my account
+            </button>
+          </div>
         </form>
         </div>
       </div>
     </>
   );
 };
-

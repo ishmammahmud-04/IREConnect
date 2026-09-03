@@ -16,10 +16,12 @@ export const AdminControlSuite: React.FC = () => {
     publishAnnouncement,
     addAnnouncement,
     showToast,
-    networkStats
+    networkStats,
+    users,
+    deleteAccount
   } = useApp();
 
-  const [adminTab, setAdminTab] = useState<'verification' | 'moderation' | 'broadcast' | 'analytics'>('verification');
+  const [adminTab, setAdminTab] = useState<'verification' | 'moderation' | 'broadcast' | 'analytics' | 'accounts'>('verification');
   const [broadcastTitle, setBroadcastTitle] = useState('');
   const [broadcastCategory, setBroadcastCategory] = useState('General');
   const [broadcastDescription, setBroadcastDescription] = useState('');
@@ -87,6 +89,15 @@ export const AdminControlSuite: React.FC = () => {
         >
           <span className="material-symbols-outlined text-[16px]">verified_user</span>
           <span>Verification Queue ({pendingQueue.length})</span>
+        </button>
+        <button
+          onClick={() => setAdminTab('accounts')}
+          className={`px-4 py-2.5 text-xs font-bold border-b-2 whitespace-nowrap transition-all flex items-center gap-1.5 ${
+            adminTab === 'accounts' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <span className="material-symbols-outlined text-[16px]">manage_accounts</span>
+          <span>Accounts</span>
         </button>
 
         <button
@@ -342,6 +353,31 @@ export const AdminControlSuite: React.FC = () => {
             <span>Broadcast Bulletin</span>
           </button>
         </form>
+      )}
+
+      {adminTab === 'accounts' && (
+        <div className="space-y-3">
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+            Deleting an account permanently removes its authentication record and associated data.
+          </div>
+          {(users || []).map((user) => (
+            <div key={user.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold text-slate-900">{user.name}</p>
+                <p className="truncate text-xs text-slate-500">{user.email || 'Email unavailable'} · {user.role.replace('_', ' ')}</p>
+              </div>
+              <button
+                type="button"
+                disabled={user.id === currentUser.id}
+                onClick={() => void deleteAccount(user.id)}
+                className="shrink-0 rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Delete account
+              </button>
+            </div>
+          ))}
+          {!users.length && <p className="text-xs text-slate-500">No accounts available.</p>}
+        </div>
       )}
 
       {/* Tab 4: Analytics */}

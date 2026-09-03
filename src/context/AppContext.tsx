@@ -8,6 +8,7 @@ import {
   Opportunity,
   Announcement,
   DepartmentEvent,
+  DepartmentMilestone,
   LinkedInImportItem,
   AppNotification,
   ConnectionRequest,
@@ -36,8 +37,12 @@ interface AppContextType {
   opportunities: Opportunity[];
   announcements: Announcement[];
   events: DepartmentEvent[];
+  milestones: DepartmentMilestone[];
   toggleEventRsvp: (eventId: string) => void;
   createDepartmentEvent: (event: DepartmentEvent) => Promise<void>;
+  createDepartmentMilestone: (milestone: DepartmentMilestone) => Promise<void>;
+  updateDepartmentMilestone: (milestone: DepartmentMilestone) => Promise<boolean>;
+  deleteDepartmentMilestone: (id: string) => Promise<boolean>;
   notifications: AppNotification[];
   directorySearchResults: User[] | null;
   searchDirectoryUsers: (query: string) => Promise<void>;
@@ -59,6 +64,7 @@ interface AppContextType {
   updateProfileImage: (file: File, type: 'avatar' | 'banner') => Promise<void>;
   updateProfileCV: (file: File) => Promise<void>;
   deleteProfileCV: () => Promise<void>;
+  deleteAccount: (targetUserId?: string) => Promise<boolean>;
   isUploadingProfileImage: boolean;
   isUploadingCV: boolean;
   
@@ -104,7 +110,7 @@ interface AppContextType {
   markNotificationAsRead: (notificationId: string) => Promise<void>;
   hydrateNotifications: (notifications: AppNotification[]) => void;
   hydratePersistedAccount: (data: { user: User; notifications: AppNotification[]; savedItemIds: string[]; isAdmin?: boolean }) => void;
-  hydratePersistedContent: (data: { projects: Project[]; achievements: Achievement[]; publications: Publication[]; articles: Article[]; opportunities: Opportunity[]; announcements: Announcement[]; events?: DepartmentEvent[] }) => void;
+  hydratePersistedContent: (data: { projects: Project[]; achievements: Achievement[]; publications: Publication[]; articles: Article[]; opportunities: Opportunity[]; announcements: Announcement[]; events?: DepartmentEvent[]; milestones?: DepartmentMilestone[] }) => void;
   hydrateDirectory: (users: User[]) => void;
   hydrateWorkflows: (workflows: WorkflowItem[]) => void;
   
@@ -180,6 +186,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [events, setEvents] = useState<DepartmentEvent[]>([]);
+  const [milestones, setMilestones] = useState<DepartmentMilestone[]>([]);
   const [directorySearchResults, setDirectorySearchResults] = useState<User[] | null>(null);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [workflowItems, setWorkflowItems] = useState<WorkflowItem[]>([]);
@@ -234,6 +241,49 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!ok) return;
     setEvents((previous) => [{ ...event, ownerId: currentUser.id }, ...previous.filter((existing) => existing.id !== event.id)]);
     showToast(`Event "${event.title}" added to the department calendar.`);
+  };
+
+  const createDepartmentMilestone = async (milestone: DepartmentMilestone) => {
+    if (!isAdmin) {
+      showToast('Administrator access required.');
+      return;
+    }
+    const record = { ...milestone, owner_id: currentUser.id };
+    const { error } = await supabase.from('department_milestones').insert(record);
+    if (error) {
+      showToast(`Milestone could not be saved: ${error.message}`);
+      return;
+    }
+    setMilestones((previous) => [record, ...previous.filter((item) => item.id !== record.id)]);
+    showToast(`Milestone "${record.title}" added.`);
+  };
+
+  const updateDepartmentMilestone = async (milestone: DepartmentMilestone) => {
+    if (!isAdmin || !confirmAction('Save these changes to this milestone?')) return false;
+    const { error } = await supabase.from('department_milestones').update({
+      year: milestone.year,
+      title: milestone.title,
+      description: milestone.description
+    }).eq('id', milestone.id);
+    if (error) {
+      showToast(`Milestone could not be updated: ${error.message}`);
+      return false;
+    }
+    setMilestones((previous) => previous.map((item) => item.id === milestone.id ? { ...item, ...milestone } : item));
+    showToast('Milestone updated.');
+    return true;
+  };
+
+  const deleteDepartmentMilestone = async (id: string) => {
+    if (!isAdmin || !confirmAction('Delete this milestone? This action cannot be undone.')) return false;
+    const { error } = await supabase.from('department_milestones').delete().eq('id', id);
+    if (error) {
+      showToast(`Milestone could not be deleted: ${error.message}`);
+      return false;
+    }
+    setMilestones((previous) => previous.filter((item) => item.id !== id));
+    showToast('Milestone deleted.');
+    return true;
   };
 
   const searchDirectoryUsers = async (query: string) => {
@@ -827,6 +877,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const deleteAccount = async (targetUserId?: string) => {
+    if (!currentUser.id) return false;
+    if (!confirmAction(targetUserId && targetUserId !== currentUser.id
+      ? 'Delete this user account permanently? This cannot be undone.'
+      : 'Delete your account permanently? This cannot be undone.')) return false;
+    const { data, error } = await supabase.functions.invoke('admin-action', {
+      body: { action: 'delete_account', targetUserId: targetUserId || currentUser.id }
+    });
+    if (error || data?.error) {
+      showToast(data?.error || 'Account deletion failed.');
+      return false;
+    }
+    if (!targetUserId || targetUserId === currentUser.id) {
+      await supabase.auth.signOut();
+      setCurrentUser(emptyUser);
+    } else {
+      setUsers((previous) => previous.filter((user) => user.id !== targetUserId));
+    }
+    showToast('Account deleted.');
+    return true;
+  };
+
   const markNotificationsAsRead = async () => {
     const { error } = await supabase.from('notifications').update({ is_read: true }).eq('user_id', currentUser.id).eq('is_read', false);
     if (error) {
@@ -855,7 +927,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const hydrateNotifications = (nextNotifications: AppNotification[]) => setNotifications(nextNotifications);
   const hydrateWorkflows = (nextWorkflows: WorkflowItem[]) => setWorkflowItems(nextWorkflows);
 
-  const hydratePersistedContent = (data: { projects: Project[]; achievements: Achievement[]; publications: Publication[]; articles: Article[]; opportunities: Opportunity[]; announcements: Announcement[]; events?: DepartmentEvent[] }) => {
+  const hydratePersistedContent = (data: { projects: Project[]; achievements: Achievement[]; publications: Publication[]; articles: Article[]; opportunities: Opportunity[]; announcements: Announcement[]; events?: DepartmentEvent[]; milestones?: DepartmentMilestone[] }) => {
     const merge = <T extends { id: string }>(existing: T[], persisted: T[]) => [...persisted, ...existing.filter((item) => !persisted.some((storedItem) => storedItem.id === item.id))];
     setProjects((previous) => merge(previous, data.projects));
     setAchievements((previous) => merge(previous, data.achievements));
@@ -864,6 +936,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setOpportunities((previous) => merge(previous, data.opportunities));
     setAnnouncements((previous) => merge(previous, data.announcements));
     if (data.events) setEvents((previous) => merge(previous, data.events || []));
+    if (data.milestones) setMilestones((previous) => merge(previous, data.milestones || []));
   };
   const hydrateDirectory = (persistedUsers: User[]) => setUsers(persistedUsers);
 
@@ -985,8 +1058,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     opportunities,
     announcements,
     events,
+    milestones,
     toggleEventRsvp,
     createDepartmentEvent,
+    createDepartmentMilestone,
+    updateDepartmentMilestone,
+    deleteDepartmentMilestone,
     notifications,
     directorySearchResults,
     searchDirectoryUsers,
@@ -1009,6 +1086,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     updateProfileImage,
     updateProfileCV,
     deleteProfileCV,
+    deleteAccount,
     isUploadingProfileImage,
     isUploadingCV,
     globalSearchQuery,
@@ -1109,8 +1187,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     opportunities,
     announcements,
     events,
+    milestones,
     toggleEventRsvp,
     createDepartmentEvent,
+    createDepartmentMilestone,
+    updateDepartmentMilestone,
+    deleteDepartmentMilestone,
     notifications,
     directorySearchResults,
     searchDirectoryUsers,

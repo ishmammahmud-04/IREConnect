@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Announcement, DepartmentEvent } from '../types';
 
@@ -10,6 +10,10 @@ export const DepartmentHub: React.FC = () => {
     events,
     createDepartmentEvent,
     createAnnouncement,
+    createDepartmentMilestone,
+    updateDepartmentMilestone,
+    deleteDepartmentMilestone,
+    milestones,
     achievements,
     users,
     setSelectedAchievement,
@@ -31,7 +35,7 @@ export const DepartmentHub: React.FC = () => {
   const [formTime, setFormTime] = useState('');
   const [formLocation, setFormLocation] = useState('');
   const [formCategory, setFormCategory] = useState('Workshop');
-  const [milestones, setMilestones] = useState<{ year: string; title: string; description: string }[]>([]);
+  const [editingMilestone, setEditingMilestone] = useState<{ id: string; year: string; title: string; description: string } | null>(null);
   const [expandedAnnouncements, setExpandedAnnouncements] = useState<Set<string>>(new Set());
   const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
   const [editingEvent, setEditingEvent] = useState<DepartmentEvent | null>(null);
@@ -48,9 +52,12 @@ export const DepartmentHub: React.FC = () => {
 
   const resetForm = () => {
     setFormTitle(''); setFormDescription(''); setFormDate(''); setFormTime(''); setFormLocation(''); setFormCategory('Workshop'); setIsAdding(false);
-    setEditingAnnouncement(null); setEditingEvent(null);
+    setEditingAnnouncement(null); setEditingEvent(null); setEditingMilestone(null);
   };
-  const canManageItem = (item: { ownerId?: string }) => canManageDepartment || item.ownerId === currentUser.id;
+  useEffect(() => {
+    if (isAdding) resetForm();
+  }, [activeTab]);
+  const canManageItem = (item: { ownerId?: string; owner_id?: string }) => canManageDepartment || item.ownerId === currentUser.id || item.owner_id === currentUser.id;
   const startAnnouncementEdit = (item: Announcement) => {
     setEditingAnnouncement(item); setFormTitle(item.title); setFormDescription(item.description); setFormCategory(item.category); setIsAdding(true);
   };
@@ -79,8 +86,11 @@ export const DepartmentHub: React.FC = () => {
       };
       await createDepartmentEvent(newEvent);
     } else if (canManageDepartment) {
-      setMilestones((previous) => [{ year: formDate || String(new Date().getFullYear()), title: formTitle.trim(), description: formDescription.trim() }, ...previous]);
-      showToast('Department milestone added.');
+      if (editingMilestone) {
+        await updateDepartmentMilestone({ ...editingMilestone, year: formDate.trim(), title: formTitle.trim(), description: formDescription.trim() });
+      } else {
+        await createDepartmentMilestone({ id: `milestone-${Date.now()}`, year: formDate.trim(), title: formTitle.trim(), description: formDescription.trim() });
+      }
     }
     resetForm();
   };
@@ -102,7 +112,7 @@ export const DepartmentHub: React.FC = () => {
 
       {((activeTab === 'announcements' || activeTab === 'events') || (canManageDepartment && activeTab === 'history')) && (
         <div className="flex justify-end">
-          <button type="button" onClick={() => setIsAdding((value) => !value)} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3.5 py-2 text-xs font-bold text-white hover:bg-slate-800">
+          <button type="button" onClick={() => isAdding ? resetForm() : setIsAdding(true)} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3.5 py-2 text-xs font-bold text-white hover:bg-slate-800">
             <span className="material-symbols-outlined text-[16px]">add</span>
             <span>{isAdding ? 'Close editor' : activeTab === 'history' ? 'Add milestone' : activeTab === 'events' ? 'Add event or workshop' : 'Add announcement'}</span>
           </button>
@@ -121,6 +131,7 @@ export const DepartmentHub: React.FC = () => {
         <form onSubmit={submitDepartmentItem} className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
           <input required value={formTitle} onChange={(event) => setFormTitle(event.target.value)} placeholder={activeTab === 'history' ? 'Milestone title' : activeTab === 'events' ? 'Event or workshop title' : 'Announcement title'} className="h-9 w-full rounded-lg border border-slate-200 px-3 text-xs outline-none focus:border-blue-600" />
           <textarea required rows={3} value={formDescription} onChange={(event) => setFormDescription(event.target.value)} placeholder="Description" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs outline-none focus:border-blue-600" />
+          {activeTab === 'history' && <input required value={formDate} onChange={(event) => setFormDate(event.target.value)} placeholder="Year" className="rounded-lg border border-slate-200 px-3 py-2 text-xs" />}
           {activeTab === 'events' && <div className="grid grid-cols-1 gap-2 sm:grid-cols-3"><input value={formDate} onChange={(event) => setFormDate(event.target.value)} placeholder="Date, e.g. 18 Sep" className="rounded-lg border border-slate-200 px-3 py-2 text-xs" /><input value={formTime} onChange={(event) => setFormTime(event.target.value)} placeholder="Time" className="rounded-lg border border-slate-200 px-3 py-2 text-xs" /><input value={formLocation} onChange={(event) => setFormLocation(event.target.value)} placeholder="Location" className="rounded-lg border border-slate-200 px-3 py-2 text-xs" /></div>}
           {(activeTab === 'announcements' || activeTab === 'events') && <select value={formCategory} onChange={(event) => setFormCategory(event.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-xs"><option>Workshop</option><option>General</option><option>Exam Notice</option><option>Equipment</option><option>Competition</option></select>}
           <div className="flex justify-end"><button type="submit" className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700">Publish</button></div>
@@ -386,7 +397,7 @@ export const DepartmentHub: React.FC = () => {
             <div className="pt-4 border-t border-slate-100 space-y-3">
               <h3 className="font-heading text-xs font-bold text-slate-900 uppercase tracking-wider">Departmental Milestones</h3>
               <div className="space-y-3 relative before:absolute before:left-2.5 before:top-1.5 before:bottom-1.5 before:w-0.5 before:bg-slate-200">
-                {milestones.length > 0 ? milestones.map((milestone) => <div key={`${milestone.year}-${milestone.title}`} className="pl-7 relative"><div className="w-2 h-2 rounded-full bg-blue-600 absolute left-[7px] top-1 ring-3 ring-white"></div><h4 className="font-bold text-xs text-slate-900">{milestone.year} — {milestone.title}</h4><p className="text-xs text-slate-500">{milestone.description}</p></div>) : <p className="pl-7 text-xs text-slate-500">No milestones have been added yet.</p>}
+                {milestones.length > 0 ? milestones.map((milestone) => <div key={milestone.id} className="pl-7 relative"><div className="w-2 h-2 rounded-full bg-blue-600 absolute left-[7px] top-1 ring-3 ring-white"></div><div className="flex justify-between gap-3"><div><h4 className="font-bold text-xs text-slate-900">{milestone.year} — {milestone.title}</h4><p className="text-xs text-slate-500">{milestone.description}</p></div>{canManageItem(milestone) && <div className="flex gap-2"><button type="button" onClick={() => { setEditingMilestone(milestone); setFormDate(milestone.year); setFormTitle(milestone.title); setFormDescription(milestone.description); setIsAdding(true); }} className="text-[11px] font-bold text-slate-700">Edit</button><button type="button" onClick={() => void deleteDepartmentMilestone(milestone.id)} className="text-[11px] font-bold text-rose-700">Delete</button></div>}</div></div>) : <p className="pl-7 text-xs text-slate-500">No milestones have been added yet.</p>}
               </div>
             </div>
           </section>

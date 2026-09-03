@@ -5,7 +5,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
 };
 
-type Action = 'verify_user' | 'reject_verification' | 'remove_content' | 'dismiss_report' | 'publish_announcement';
+type Action = 'verify_user' | 'reject_verification' | 'remove_content' | 'dismiss_report' | 'publish_announcement' | 'delete_account';
 
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -22,6 +22,25 @@ Deno.serve(async (request) => {
     if (userError || !user) return json({ error: 'Invalid session.' }, 401);
 
     const adminClient = createClient(supabaseUrl, serviceKey);
+    const body = await request.json() as { action: Action; workflowId?: string; title?: string; description?: string; category?: string; isPinned?: string; targetUserId?: string };
+    if (!body.action) return json({ error: 'Action is required.' }, 400);
+
+    if (body.action === 'delete_account') {
+      const targetUserId = body.targetUserId || user.id;
+      if (targetUserId !== user.id) {
+        const { data: adminUser, error: adminError } = await adminClient
+          .from('admin_users')
+          .select('user_id')
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+          .maybeSingle();
+        if (adminError || !adminUser) return json({ error: 'Administrator access required.' }, 403);
+      }
+      const { error } = await adminClient.auth.admin.deleteUser(targetUserId);
+      if (error) return json({ error: error.message }, 400);
+      return json({ ok: true });
+    }
+
     const { data: adminUser, error: adminError } = await adminClient
       .from('admin_users')
       .select('user_id')
@@ -29,9 +48,6 @@ Deno.serve(async (request) => {
       .eq('status', 'active')
       .maybeSingle();
     if (adminError || !adminUser) return json({ error: 'Administrator access required.' }, 403);
-
-    const body = await request.json() as { action: Action; workflowId?: string; title?: string; description?: string; category?: string; isPinned?: string };
-    if (!body.action) return json({ error: 'Action is required.' }, 400);
 
     if (body.action === 'publish_announcement') {
       if (!body.title?.trim() || !body.description?.trim()) return json({ error: 'Title and description are required.' }, 400);
