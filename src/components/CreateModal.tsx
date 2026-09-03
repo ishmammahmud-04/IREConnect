@@ -58,6 +58,8 @@ export const CreateModal: React.FC = () => {
   const [pdfUrl, setPdfUrl] = useState('');
   const [supervisorName, setSupervisorName] = useState('');
   const [teamMembersText, setTeamMembersText] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const resetForm = () => {
     setTitle('');
@@ -190,30 +192,75 @@ export const CreateModal: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     if (!currentUser.id) {
       showToast('Please sign in before publishing.');
       return;
     }
-    if (!title || !desc) {
-      showToast('Please fill out all required fields');
+    const trimmedTitle = title.trim();
+    const trimmedDesc = desc.trim();
+    const trimmedPublicationUrl = publicationUrl.trim();
+    const trimmedDemoUrl = demoUrl.trim();
+    const trimmedDocUrl = docUrl.trim();
+    const trimmedYear = year.trim();
+    const trimmedCategory = category.trim();
+    const trimmedSecondaryField = secondaryField.trim();
+    const trimmedSubtitle = subtitle.trim();
+    const trimmedAuthors = authorsText.trim();
+    const trimmedProblem = problem.trim();
+    const trimmedSolution = solution.trim();
+    const trimmedSupervisorName = supervisorName.trim();
+    const nextErrors: Record<string, string> = {};
+    if (!trimmedTitle) nextErrors.title = 'Title is required.';
+    if (!trimmedDesc) nextErrors.description = 'Description or abstract is required.';
+
+    const validateUrl = (value: string, field: string) => {
+      if (!value) return;
+      try {
+        const parsed = new URL(value);
+        if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error();
+      } catch {
+        nextErrors[field] = 'Enter a valid http:// or https:// URL.';
+      }
+    };
+    validateUrl(trimmedDemoUrl, 'demoUrl');
+    validateUrl(trimmedDocUrl, 'docUrl');
+    if (contentType !== 'publication') validateUrl(trimmedPublicationUrl, 'publicationUrl');
+    if (contentType === 'publication' && trimmedPublicationUrl && !/^10\.\d{4,9}\/\S+$/i.test(trimmedPublicationUrl)) {
+      validateUrl(trimmedPublicationUrl, 'publicationUrl');
+    }
+    if (['publication', 'achievement', 'opportunity'].includes(contentType) && trimmedYear) {
+      const isDate = /^\d{4}(?:-\d{2}(?:-\d{2})?)?$/.test(trimmedYear);
+      if (!isDate) nextErrors.year = 'Use a date in YYYY, YYYY-MM, or YYYY-MM-DD format.';
+      else {
+        const [dateYear, month, day] = trimmedYear.split('-').map(Number);
+        if (month && (month < 1 || month > 12) || day && (day < 1 || day > 31)) {
+          nextErrors.year = 'Enter a valid date.';
+        }
+      }
+    }
+    setFieldErrors(nextErrors);
+    if (Object.keys(nextErrors).length) {
+      showToast('Please review the highlighted fields before publishing.');
       return;
     }
 
+    setIsSubmitting(true);
     const tagArray = tags.split(',').map((t) => t.trim()).filter(Boolean);
     const sharedBase = {
       id: createModalEditingItem?.item?.id || `${contentType}-${Date.now()}`,
-      title,
+      title: trimmedTitle,
       coverImage: coverImage || '',
-      pdfUrl: pdfUrl || undefined,
+      pdfUrl: pdfUrl.trim() || undefined,
       ownerId: currentUser.id
     };
 
     if (contentType === 'announcement') {
       await createAnnouncement({
         id: sharedBase.id,
-        title,
-        description: desc,
-        category: (category || 'General') as 'Competition' | 'Workshop' | 'General' | 'Exam Notice' | 'Announcement',
+        title: trimmedTitle,
+        description: trimmedDesc,
+        category: (trimmedCategory || 'General') as 'Competition' | 'Workshop' | 'General' | 'Exam Notice' | 'Announcement',
         isPinned: false,
         author: currentUser.name,
         date: 'Just now'
@@ -222,16 +269,16 @@ export const CreateModal: React.FC = () => {
     } else if (contentType === 'project') {
       const projectItem = {
         ...sharedBase,
-        category: category as any,
-        batch,
-        year,
-        problem,
-        solution,
-        description: desc,
+        category: trimmedCategory as any,
+        batch: batch.trim(),
+        year: trimmedYear,
+        problem: trimmedProblem,
+        solution: trimmedSolution,
+        description: trimmedDesc,
         technologies: tagArray,
         supervisor: {
           id: currentUser.id,
-          name: supervisorName,
+          name: trimmedSupervisorName,
           designation: currentUser.headline,
           avatar: currentUser.avatar || ''
         },
@@ -241,9 +288,9 @@ export const CreateModal: React.FC = () => {
           role: 'Lead Contributor',
           avatar: currentUser.avatar
         }],
-        githubUrl: publicationUrl.trim() || undefined,
-        demoUrl: demoUrl.trim() || undefined,
-        docUrl: docUrl.trim() || undefined,
+        githubUrl: trimmedPublicationUrl || undefined,
+        demoUrl: trimmedDemoUrl || undefined,
+        docUrl: trimmedDocUrl || undefined,
         mediaGallery: coverImage ? [coverImage] : [],
         relatedAchievements: [],
         relatedPublications: [],
@@ -253,40 +300,42 @@ export const CreateModal: React.FC = () => {
       if (createModalEditingItem) {
         const ok = await updatePublishedContent('project', projectItem);
         if (ok) closeModal();
+        setIsSubmitting(false);
         return;
       }
       createProject(projectItem);
     } else if (contentType === 'publication') {
       const publicationItem = {
         ...sharedBase,
-        authors: authorsText.split(',').map((author) => author.trim()).filter(Boolean),
-        journal: secondaryField,
-        doi: publicationUrl.trim(),
+        authors: trimmedAuthors.split(',').map((author) => author.trim()).filter(Boolean),
+        journal: trimmedSecondaryField,
+        doi: trimmedPublicationUrl,
         publicationType: publicationType as 'Research Paper' | 'Journal' | 'Conference Proceedings' | 'Book Chapter' | 'Thesis',
         status: status as 'Published' | 'Accepted' | 'Under Review' | 'Preprint',
-        abstract: desc,
+        abstract: trimmedDesc,
         keywords: tagArray,
-        date: year,
-        researchArea: category,
-        externalUrl: publicationUrl.trim() || undefined,
+        date: trimmedYear,
+        researchArea: trimmedCategory,
+        externalUrl: trimmedPublicationUrl || undefined,
         coverImage: coverImage || '',
         visibility: 'public' as const
       };
       if (createModalEditingItem) {
         const ok = await updatePublishedContent('publication', publicationItem);
         if (ok) closeModal();
+        setIsSubmitting(false);
         return;
       }
       createPublication(publicationItem);
     } else if (contentType === 'achievement') {
       const achievementItem = {
         ...sharedBase,
-        category: (category as any) || 'Award',
-        organization: secondaryField,
+        category: (trimmedCategory as any) || 'Award',
+        organization: trimmedSecondaryField,
         personName: currentUser.name,
         personRole: currentUser.headline,
         personAvatar: currentUser.avatar,
-        date: year,
+        date: trimmedYear,
         description: desc,
         appliedSkills: tagArray,
         image: coverImage || '',
@@ -298,14 +347,15 @@ export const CreateModal: React.FC = () => {
       if (createModalEditingItem) {
         const ok = await updatePublishedContent('achievement', achievementItem);
         if (ok) closeModal();
+        setIsSubmitting(false);
         return;
       }
       createAchievement(achievementItem);
     } else if (contentType === 'article') {
       const articleItem = {
         ...sharedBase,
-        subtitle,
-        category,
+        subtitle: trimmedSubtitle,
+        category: trimmedCategory,
         author: {
           id: currentUser.id,
           name: currentUser.name,
@@ -313,31 +363,32 @@ export const CreateModal: React.FC = () => {
           avatar: currentUser.avatar,
           bio: currentUser.bio
         },
-        date: year,
-        readingTime: `${Math.max(1, Math.ceil(desc.split(/\s+/).filter(Boolean).length / 200))} min read`,
+        date: trimmedYear,
+        readingTime: `${Math.max(1, Math.ceil(trimmedDesc.split(/\s+/).filter(Boolean).length / 200))} min read`,
         coverImage: coverImage || '',
         tags: tagArray,
-        body: [desc],
+        body: [trimmedDesc],
         views: 0
       };
       if (createModalEditingItem) {
         const ok = await updatePublishedContent('article', articleItem);
         if (ok) closeModal();
+        setIsSubmitting(false);
         return;
       }
       createArticle(articleItem);
     } else if (contentType === 'opportunity') {
       const opportunityItem = {
         ...sharedBase,
-        organization: secondaryField,
+        organization: trimmedSecondaryField,
         organizationLogo: coverImage || '',
         type: (category as any) || 'Internship',
-        description: desc,
+        description: trimmedDesc,
         requirements: [],
         requiredSkills: tagArray,
         location: '',
-        deadline: '',
-        applicationUrl: publicationUrl.trim() || undefined,
+        deadline: trimmedYear,
+        applicationUrl: trimmedPublicationUrl || undefined,
         contactEmail: currentUser.email || undefined,
         postedBy: {
           name: currentUser.name,
@@ -349,12 +400,14 @@ export const CreateModal: React.FC = () => {
       if (createModalEditingItem) {
         const ok = await updatePublishedContent('opportunity', opportunityItem);
         if (ok) closeModal();
+        setIsSubmitting(false);
         return;
       }
       createOpportunity(opportunityItem);
     }
 
     closeModal();
+    setIsSubmitting(false);
   };
 
   return (
@@ -405,12 +458,14 @@ export const CreateModal: React.FC = () => {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-5 space-y-3">
+        <form onSubmit={handleSubmit} className="p-5 space-y-3" noValidate>
+          <p className="text-[11px] text-slate-500">Fields marked <span className="font-bold text-red-600">*</span> are required. Please check highlighted fields before publishing.</p>
           <div>
             <label className="block text-xs font-bold text-slate-800 mb-1">
               {contentType === 'project' ? 'Project Title' : contentType === 'publication' ? 'Paper Title' : 'Title'} *
             </label>
-            <input type="text" required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Enter a clear title" className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600" />
+            <input type="text" required value={title} onChange={(e) => { setTitle(e.target.value); setFieldErrors((errors) => ({ ...errors, title: '' })); }} aria-invalid={Boolean(fieldErrors.title)} aria-describedby={fieldErrors.title ? 'title-error' : undefined} placeholder="Enter a clear title" className={`w-full h-8 px-2.5 rounded-lg border bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600 ${fieldErrors.title ? 'border-red-400' : 'border-slate-200'}`} />
+            {fieldErrors.title && <p id="title-error" className="mt-1 text-[11px] text-red-600">{fieldErrors.title}</p>}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -447,8 +502,8 @@ export const CreateModal: React.FC = () => {
               <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600">
                 <option value="">Select status</option><option>Active</option><option>Completed</option><option>Published</option><option>Ongoing</option>
               </select>
-              <input type="url" value={demoUrl} onChange={(e) => setDemoUrl(e.target.value)} placeholder="Demo URL (optional)" className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600" />
-              <input type="url" value={docUrl} onChange={(e) => setDocUrl(e.target.value)} placeholder="Documentation URL (optional)" className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600" />
+              <input type="url" value={demoUrl} onChange={(e) => { setDemoUrl(e.target.value); setFieldErrors((errors) => ({ ...errors, demoUrl: '' })); }} aria-invalid={Boolean(fieldErrors.demoUrl)} placeholder="Demo URL (optional)" className={`w-full h-8 px-2.5 rounded-lg border bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600 ${fieldErrors.demoUrl ? 'border-red-400' : 'border-slate-200'}`} />
+              <input type="url" value={docUrl} onChange={(e) => { setDocUrl(e.target.value); setFieldErrors((errors) => ({ ...errors, docUrl: '' })); }} aria-invalid={Boolean(fieldErrors.docUrl)} placeholder="Documentation URL (optional)" className={`w-full h-8 px-2.5 rounded-lg border bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600 ${fieldErrors.docUrl ? 'border-red-400' : 'border-slate-200'}`} />
             </div>
           )}
 
@@ -457,8 +512,8 @@ export const CreateModal: React.FC = () => {
               <input type="text" value={authorsText} onChange={(e) => setAuthorsText(e.target.value)} placeholder="Authors, comma-separated" className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600" />
               <select value={publicationType} onChange={(e) => setPublicationType(e.target.value)} className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600"><option value="">Select publication type</option><option>Research Paper</option><option>Journal</option><option>Conference Proceedings</option><option>Book Chapter</option><option>Thesis</option></select>
               <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600"><option value="">Select publication status</option><option>Published</option><option>Accepted</option><option>Under Review</option><option>Preprint</option></select>
-              <input type="text" value={year} onChange={(e) => setYear(e.target.value)} placeholder="Publication date" className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600" />
-              <input type="url" value={publicationUrl} onChange={(e) => setPublicationUrl(e.target.value)} placeholder="DOI or external URL (optional)" className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600" />
+              <input type="text" value={year} onChange={(e) => { setYear(e.target.value); setFieldErrors((errors) => ({ ...errors, year: '' })); }} aria-invalid={Boolean(fieldErrors.year)} placeholder="Publication date (YYYY or YYYY-MM-DD)" className={`w-full h-8 px-2.5 rounded-lg border bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600 ${fieldErrors.year ? 'border-red-400' : 'border-slate-200'}`} />
+              <input type="text" value={publicationUrl} onChange={(e) => { setPublicationUrl(e.target.value); setFieldErrors((errors) => ({ ...errors, publicationUrl: '' })); }} aria-invalid={Boolean(fieldErrors.publicationUrl)} placeholder="DOI or external URL (optional)" className={`w-full h-8 px-2.5 rounded-lg border bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600 ${fieldErrors.publicationUrl ? 'border-red-400' : 'border-slate-200'}`} />
             </div>
           )}
 
@@ -467,7 +522,7 @@ export const CreateModal: React.FC = () => {
           )}
 
           {(contentType === 'achievement' || contentType === 'opportunity') && (
-            <input type="text" value={year} onChange={(e) => setYear(e.target.value)} placeholder={contentType === 'achievement' ? 'Achievement date (optional)' : 'Deadline (optional)'} className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600" />
+            <input type="text" value={year} onChange={(e) => { setYear(e.target.value); setFieldErrors((errors) => ({ ...errors, year: '' })); }} aria-invalid={Boolean(fieldErrors.year)} placeholder={contentType === 'achievement' ? 'Achievement date (YYYY-MM-DD, optional)' : 'Deadline (YYYY-MM-DD, optional)'} className={`w-full h-8 px-2.5 rounded-lg border bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600 ${fieldErrors.year ? 'border-red-400' : 'border-slate-200'}`} />
           )}
 
           {contentType === 'opportunity' && (
@@ -496,13 +551,14 @@ export const CreateModal: React.FC = () => {
 
           <div>
             <label className="block text-xs font-bold text-slate-800 mb-1">Detailed Description / Abstract *</label>
-            <textarea required rows={5} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Enter the full description, abstract, or article content..." className="w-full p-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600" />
+            <textarea required rows={5} value={desc} onChange={(e) => { setDesc(e.target.value); setFieldErrors((errors) => ({ ...errors, description: '' })); }} aria-invalid={Boolean(fieldErrors.description)} aria-describedby={fieldErrors.description ? 'description-error' : undefined} placeholder="Enter the full description, abstract, or article content..." className={`w-full p-2.5 rounded-lg border bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600 ${fieldErrors.description ? 'border-red-400' : 'border-slate-200'}`} />
+            {fieldErrors.description && <p id="description-error" className="mt-1 text-[11px] text-red-600">{fieldErrors.description}</p>}
           </div>
 
           <div className="pt-2 border-t border-slate-100 flex justify-end gap-2">
             <button type="button" onClick={closeModal} className="px-3.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors">Cancel</button>
-            <button type="submit" className="px-4 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-colors shadow-2xs">
-              {createModalEditingItem ? 'Update' : 'Publish to Department'}
+            <button type="submit" disabled={isSubmitting} className="px-4 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-colors shadow-2xs disabled:cursor-not-allowed disabled:opacity-60">
+              {isSubmitting ? 'Saving…' : createModalEditingItem ? 'Update' : 'Publish to Department'}
             </button>
           </div>
         </form>
