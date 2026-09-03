@@ -12,6 +12,7 @@ export const ActivityFeed: React.FC = () => {
     submitReport, setSelectedProject, setSelectedPublication, setSelectedAchievement, setSelectedArticle, setSelectedOpportunity, getConnectionStatus
   } = useApp();
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [publishedAt, setPublishedAt] = useState<Record<string, string>>({});
 
   const entries = useMemo(() => ([
     ...projects.map((item) => ({ id: item.id, type: 'project' as const, title: item.title, summary: item.description, ownerId: item.ownerId })),
@@ -24,16 +25,22 @@ export const ActivityFeed: React.FC = () => {
     if (!item.ownerId || item.ownerId === currentUser.id || !item.visibility || item.visibility === 'public') return true;
     if (item.visibility === 'department') return users.find((u) => u.id === item.ownerId)?.department === currentUser.department;
     return item.visibility === 'connections' && item.ownerId ? getConnectionStatus(item.ownerId) === 'connected' : false;
-  }).sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 8), [projects, achievements, publications, articles, opportunities, announcements, currentUser, users, getConnectionStatus]);
+  }).sort((a, b) => (publishedAt[b.id] || b.date || '').localeCompare(publishedAt[a.id] || a.date || '')).slice(0, 8), [projects, achievements, publications, articles, opportunities, announcements, currentUser, users, getConnectionStatus, publishedAt]);
 
   useEffect(() => {
     if (!entries.length) return;
     const ids = entries.map((entry) => entry.id);
     void Promise.all([
+      supabase.from('content_items').select('id,created_at').in('id', ids),
       supabase.from('content_comments').select('*').in('content_id', ids).order('created_at', { ascending: true }),
       supabase.from('content_reactions').select('content_id,user_id').in('content_id', ids)
-    ]).then(([commentsResult, reactionsResult]) => {
-      if (commentsResult.error || reactionsResult.error) return;
+    ]).then(([contentResult, commentsResult, reactionsResult]) => {
+      if (contentResult.error || commentsResult.error || reactionsResult.error) return;
+      const timestamps: Record<string, string> = {};
+      (contentResult.data || []).forEach((row) => {
+        if (row.created_at) timestamps[row.id] = row.created_at;
+      });
+      setPublishedAt(timestamps);
       const comments: FeedComment[] = (commentsResult.data || []).map((row) => ({ id: row.id, contentId: row.content_id, userId: row.user_id, body: row.body, createdAt: row.created_at }));
       const reactions: Record<string, FeedReactionSummary> = {};
       (reactionsResult.data || []).forEach((row) => {
@@ -65,7 +72,7 @@ export const ActivityFeed: React.FC = () => {
         return <article key={`${entry.type}-${entry.id}`} className="rounded-xl border border-slate-200 p-3.5">
           <div className="flex items-start gap-2">
             {owner && <img src={owner.avatar} alt="" className="w-8 h-8 rounded-lg object-cover" />}
-            <div className="min-w-0 flex-1"><p className="text-[11px] text-slate-500">{owner?.name || 'Department member'} · {entry.type}</p><button onClick={() => openEntry(entry)} className="text-left font-bold text-sm text-slate-900 hover:text-blue-600">{entry.title}</button><p className="text-xs text-slate-600 line-clamp-2 mt-1">{entry.summary}</p></div>
+            <div className="min-w-0 flex-1"><p className="text-[11px] text-slate-500">{owner?.name || 'Department member'} · {entry.type} · {publishedAt[entry.id] ? new Date(publishedAt[entry.id]).toLocaleString() : 'Recently published'}</p><button onClick={() => openEntry(entry)} className="text-left font-bold text-sm text-slate-900 hover:text-blue-600">{entry.title}</button><p className="text-xs text-slate-600 line-clamp-2 mt-1">{entry.summary}</p></div>
             <button onClick={() => submitReport(entry.title, 'Inappropriate Content', `Reported from activity feed (${entry.type}).`)} className="text-slate-400 hover:text-rose-600" aria-label="Report content"><span className="material-symbols-outlined text-[18px]">flag</span></button>
           </div>
           <div className="flex items-center gap-4 mt-3 text-xs">

@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { User } from '../types';
 import { FacultyProfileView } from './FacultyProfileView';
+import { ProfileCompletenessCard } from './ProfileCompletenessCard';
 
 interface ProfileViewProps {
   userOverride?: User | null;
@@ -303,6 +304,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
           </div>
         </div>
       </section>
+
+      <ProfileCompletenessCard user={user} />
 
       {/* Grid: Bio, CV, Skills */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4">

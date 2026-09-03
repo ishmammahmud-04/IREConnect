@@ -1,6 +1,7 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
 import { ActivityFeed } from './ActivityFeed';
+import { ProfileCompletenessCard } from './ProfileCompletenessCard';
 
 export const HomeDashboard: React.FC = () => {
   const {
@@ -83,6 +84,8 @@ export const HomeDashboard: React.FC = () => {
           </div>
         </div>
       </section>
+
+      <ProfileCompletenessCard />
 
       {/* Quick Access Bento Grid */}
       <section>
