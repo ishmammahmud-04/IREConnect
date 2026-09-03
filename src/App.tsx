@@ -447,6 +447,7 @@ const notificationRowToAppNotification = (notification: Record<string, unknown>)
     || notification.notification_type === 'announcement'
     || notification.notification_type === 'event'
     || notification.notification_type === 'message'
+    || notification.notification_type === 'content_interaction'
     ? notification.notification_type as AppNotification['type']
     : 'verification',
   destination: notification.notification_type === 'connection' || notification.notification_type === 'mentorship' || notification.notification_type === 'message'

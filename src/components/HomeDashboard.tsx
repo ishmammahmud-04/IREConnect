@@ -1,5 +1,6 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
+import { ActivityFeed } from './ActivityFeed';
 
 export const HomeDashboard: React.FC = () => {
   const {
@@ -211,6 +212,8 @@ export const HomeDashboard: React.FC = () => {
           </div>
         </section>
       )}
+
+      <ActivityFeed />
 
       {/* Recommended Connections */}
       <section>

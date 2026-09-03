@@ -293,7 +293,7 @@ export interface AppNotification {
   time: string;
   isToday: boolean;
   isRead: boolean;
-  type: 'connection' | 'mentorship' | 'opportunity' | 'announcement' | 'event' | 'message' | 'verification';
+  type: 'connection' | 'mentorship' | 'opportunity' | 'announcement' | 'event' | 'message' | 'verification' | 'content_interaction';
   destination?: 'network' | 'opportunities' | 'department' | 'profile';
   avatar?: string;
 }
@@ -350,4 +350,17 @@ export interface WorkflowItem {
   data: Record<string, unknown>;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface FeedComment {
+  id: string;
+  contentId: string;
+  userId: string;
+  body: string;
+  createdAt: string;
+}
+
+export interface FeedReactionSummary {
+  count: number;
+  reacted: boolean;
 }

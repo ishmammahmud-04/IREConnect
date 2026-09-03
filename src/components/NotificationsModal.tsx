@@ -9,7 +9,8 @@ const notificationIcons: Record<AppNotification['type'], string> = {
   announcement: 'campaign',
   event: 'event',
   message: 'chat_bubble',
-  verification: 'verified'
+  verification: 'verified',
+  content_interaction: 'forum'
 };
 
 export const NotificationsModal: React.FC = () => {

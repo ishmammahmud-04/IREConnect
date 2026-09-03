@@ -38,11 +38,21 @@ export const CreateModal: React.FC = () => {
 
   const [contentType, setContentType] = useState<'project' | 'publication' | 'achievement' | 'article' | 'opportunity' | 'announcement'>('project');
   const [title, setTitle] = useState('');
-  const [category, setCategory] = useState('Robotics');
+  const [category, setCategory] = useState('');
   const [desc, setDesc] = useState('');
-  const [tags, setTags] = useState('ROS2, Python, Computer Vision');
+  const [tags, setTags] = useState('');
   const [secondaryField, setSecondaryField] = useState('');
   const [publicationUrl, setPublicationUrl] = useState('');
+  const [authorsText, setAuthorsText] = useState('');
+  const [problem, setProblem] = useState('');
+  const [solution, setSolution] = useState('');
+  const [batch, setBatch] = useState('');
+  const [year, setYear] = useState('');
+  const [status, setStatus] = useState('');
+  const [demoUrl, setDemoUrl] = useState('');
+  const [docUrl, setDocUrl] = useState('');
+  const [subtitle, setSubtitle] = useState('');
+  const [publicationType, setPublicationType] = useState('');
   const [coverImage, setCoverImage] = useState('');
   const [pendingCropCover, setPendingCropCover] = useState<File | null>(null);
   const [pdfUrl, setPdfUrl] = useState('');
@@ -51,11 +61,21 @@ export const CreateModal: React.FC = () => {
 
   const resetForm = () => {
     setTitle('');
-    setCategory('Robotics');
+    setCategory('');
     setDesc('');
-    setTags('ROS2, Python, Computer Vision');
+    setTags('');
     setSecondaryField('');
     setPublicationUrl('');
+    setAuthorsText('');
+    setProblem('');
+    setSolution('');
+    setBatch('');
+    setYear('');
+    setStatus('');
+    setDemoUrl('');
+    setDocUrl('');
+    setSubtitle('');
+    setPublicationType('');
     setCoverImage('');
     setPdfUrl('');
     setSupervisorName('');
@@ -68,11 +88,21 @@ export const CreateModal: React.FC = () => {
       const item = createModalEditingItem.item;
       setContentType(createModalEditingItem.type);
       setTitle(item.title || '');
-      setCategory(item.category || item.type || 'Robotics');
+      setCategory(item.category || item.type || '');
       setDesc(item.description || item.abstract || item.body?.join(' ') || '');
       setTags((item.tags || item.technologies || item.keywords || []).join(', '));
       setSecondaryField(item.journal || item.organization || item.conference || '');
       setPublicationUrl(item.externalUrl || item.applicationUrl || item.certificateUrl || '');
+      setAuthorsText((item.authors || []).join(', '));
+      setProblem(item.problem || '');
+      setSolution(item.solution || '');
+      setBatch(item.batch || '');
+      setYear(item.year || '');
+      setStatus(item.status || '');
+      setDemoUrl(item.demoUrl || '');
+      setDocUrl(item.docUrl || '');
+      setSubtitle(item.subtitle || '');
+      setPublicationType(item.publicationType || '');
       setCoverImage(item.coverImage || item.image || '');
       setPdfUrl(item.pdfUrl || item.docUrl || item.certificateUrl || '');
       setSupervisorName(item.supervisor?.name || '');
@@ -153,6 +183,11 @@ export const CreateModal: React.FC = () => {
     setCreateModalEditingItem(null);
   };
 
+  const selectContentType = (type: typeof contentType) => {
+    if (type !== contentType) resetForm();
+    setContentType(type);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser.id) {
@@ -187,17 +222,17 @@ export const CreateModal: React.FC = () => {
     } else if (contentType === 'project') {
       const projectItem = {
         ...sharedBase,
-        category: (category as any) || 'Robotics',
-        batch: currentUser.batch || '',
-        year: String(new Date().getFullYear()),
-        problem: 'Need to solve a relevant real-world challenge in the department ecosystem.',
-        solution: desc,
+        category: category as any,
+        batch,
+        year,
+        problem,
+        solution,
         description: desc,
-        technologies: tagArray.length ? tagArray : ['ROS2', 'Python', 'SLAM'],
+        technologies: tagArray,
         supervisor: {
           id: currentUser.id,
-          name: supervisorName || currentUser.name || 'Faculty Advisor',
-          designation: currentUser.headline || 'Department Member',
+          name: supervisorName,
+          designation: currentUser.headline,
           avatar: currentUser.avatar || ''
         },
         teamMembers: parseTeamMembers().length ? parseTeamMembers() : [{
@@ -207,12 +242,12 @@ export const CreateModal: React.FC = () => {
           avatar: currentUser.avatar
         }],
         githubUrl: publicationUrl.trim() || undefined,
-        demoUrl: undefined,
-        docUrl: undefined,
+        demoUrl: demoUrl.trim() || undefined,
+        docUrl: docUrl.trim() || undefined,
         mediaGallery: coverImage ? [coverImage] : [],
         relatedAchievements: [],
         relatedPublications: [],
-        status: 'Ongoing' as const,
+        status: status as 'Active' | 'Completed' | 'Published' | 'Ongoing',
         likesCount: 0
       };
       if (createModalEditingItem) {
@@ -224,15 +259,15 @@ export const CreateModal: React.FC = () => {
     } else if (contentType === 'publication') {
       const publicationItem = {
         ...sharedBase,
-        authors: [currentUser.name],
-        journal: secondaryField || 'Publication venue',
-        doi: publicationUrl.trim() || 'Pending DOI',
-        publicationType: 'Journal' as const,
-        status: 'Published' as const,
+        authors: authorsText.split(',').map((author) => author.trim()).filter(Boolean),
+        journal: secondaryField,
+        doi: publicationUrl.trim(),
+        publicationType: publicationType as 'Research Paper' | 'Journal' | 'Conference Proceedings' | 'Book Chapter' | 'Thesis',
+        status: status as 'Published' | 'Accepted' | 'Under Review' | 'Preprint',
         abstract: desc,
-        keywords: tagArray.length ? tagArray : ['Robotics', 'Autonomy'],
-        date: new Date().toISOString().slice(0, 10),
-        researchArea: category || 'Research',
+        keywords: tagArray,
+        date: year,
+        researchArea: category,
         externalUrl: publicationUrl.trim() || undefined,
         coverImage: coverImage || '',
         visibility: 'public' as const
@@ -247,16 +282,16 @@ export const CreateModal: React.FC = () => {
       const achievementItem = {
         ...sharedBase,
         category: (category as any) || 'Award',
-        organization: secondaryField || 'Organization',
+        organization: secondaryField,
         personName: currentUser.name,
         personRole: currentUser.headline,
         personAvatar: currentUser.avatar,
-        date: new Date().toISOString().slice(0, 10),
+        date: year,
         description: desc,
-        appliedSkills: tagArray.length ? tagArray : ['Robotics', 'Leadership'],
+        appliedSkills: tagArray,
         image: coverImage || '',
         certificateUrl: publicationUrl.trim() || undefined,
-        isVerified: true,
+        isVerified: false,
         collaborators: [],
         visibility: 'public' as const
       };
@@ -269,8 +304,8 @@ export const CreateModal: React.FC = () => {
     } else if (contentType === 'article') {
       const articleItem = {
         ...sharedBase,
-        subtitle: desc.slice(0, 100),
-        category: category || 'Technical Blog',
+        subtitle,
+        category,
         author: {
           id: currentUser.id,
           name: currentUser.name,
@@ -278,10 +313,10 @@ export const CreateModal: React.FC = () => {
           avatar: currentUser.avatar,
           bio: currentUser.bio
         },
-        date: new Date().toISOString().slice(0, 10),
-        readingTime: '5 min read',
+        date: year,
+        readingTime: `${Math.max(1, Math.ceil(desc.split(/\s+/).filter(Boolean).length / 200))} min read`,
         coverImage: coverImage || '',
-        tags: tagArray.length ? tagArray : ['Engineering', 'IRE'],
+        tags: tagArray,
         body: [desc],
         views: 0
       };
@@ -294,14 +329,14 @@ export const CreateModal: React.FC = () => {
     } else if (contentType === 'opportunity') {
       const opportunityItem = {
         ...sharedBase,
-        organization: secondaryField || 'Organization',
+        organization: secondaryField,
         organizationLogo: coverImage || '',
         type: (category as any) || 'Internship',
         description: desc,
-        requirements: desc ? [desc] : ['Please review the full opportunity details.'],
-        requiredSkills: tagArray.length ? tagArray : ['Python', 'ROS'],
-        location: 'Hybrid / IRE Innovation Hub',
-        deadline: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString().slice(0, 10),
+        requirements: [],
+        requiredSkills: tagArray,
+        location: '',
+        deadline: '',
         applicationUrl: publicationUrl.trim() || undefined,
         contactEmail: currentUser.email || undefined,
         postedBy: {
@@ -356,7 +391,7 @@ export const CreateModal: React.FC = () => {
               <button
                 key={item.type}
                 type="button"
-                onClick={() => setContentType(item.type)}
+                onClick={() => selectContentType(item.type)}
                 className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1 whitespace-nowrap transition-all border ${
                   contentType === item.type
                     ? 'bg-slate-900 text-white border-slate-900 shadow-2xs'
@@ -375,22 +410,30 @@ export const CreateModal: React.FC = () => {
             <label className="block text-xs font-bold text-slate-800 mb-1">
               {contentType === 'project' ? 'Project Title' : contentType === 'publication' ? 'Paper Title' : 'Title'} *
             </label>
-            <input type="text" required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g., Autonomous Rover 'Ares' or Edge AI for ROS2" className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600" />
+            <input type="text" required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Enter a clear title" className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600" />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-slate-800 mb-1">Category / Type</label>
-              <input type="text" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g., Robotics, IoT, Competition" className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600" />
+              <input type="text" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Enter category or type" className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600" />
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-800 mb-1">{contentType === 'publication' ? 'Journal / Conference' : contentType === 'achievement' ? 'Awarding Body' : 'Organization / Affiliation'}</label>
-              <input type="text" value={secondaryField} onChange={(e) => setSecondaryField(e.target.value)} placeholder="e.g., IEEE Robotics / Cisco / MIT Lab" className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600" />
+              <input type="text" value={secondaryField} onChange={(e) => setSecondaryField(e.target.value)} placeholder="Enter organization, journal, or venue" className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600" />
             </div>
           </div>
 
           {contentType === 'project' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-800 mb-1">Problem / motivation</label>
+                <textarea rows={2} value={problem} onChange={(e) => setProblem(e.target.value)} className="w-full p-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-800 mb-1">Solution / approach</label>
+                <textarea rows={2} value={solution} onChange={(e) => setSolution(e.target.value)} className="w-full p-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600" />
+              </div>
               <div>
                 <label className="block text-xs font-bold text-slate-800 mb-1">Supervisor name</label>
                 <input type="text" value={supervisorName} onChange={(e) => setSupervisorName(e.target.value)} placeholder="e.g., Dr. Ashik Rahman" className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600" />
@@ -399,13 +442,38 @@ export const CreateModal: React.FC = () => {
                 <label className="block text-xs font-bold text-slate-800 mb-1">Team members</label>
                 <input type="text" value={teamMembersText} onChange={(e) => setTeamMembersText(e.target.value)} placeholder="Name - role, one per line" className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600" />
               </div>
+              <input type="text" value={batch} onChange={(e) => setBatch(e.target.value)} placeholder="Batch or graduation year" className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600" />
+              <input type="text" value={year} onChange={(e) => setYear(e.target.value)} placeholder="Project year" className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600" />
+              <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600">
+                <option value="">Select status</option><option>Active</option><option>Completed</option><option>Published</option><option>Ongoing</option>
+              </select>
+              <input type="url" value={demoUrl} onChange={(e) => setDemoUrl(e.target.value)} placeholder="Demo URL (optional)" className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600" />
+              <input type="url" value={docUrl} onChange={(e) => setDocUrl(e.target.value)} placeholder="Documentation URL (optional)" className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600" />
             </div>
           )}
 
           {contentType === 'publication' && (
-            <div>
-              <label className="block text-xs font-bold text-slate-800 mb-1">Published paper link</label>
-              <input type="url" value={publicationUrl} onChange={(e) => setPublicationUrl(e.target.value)} placeholder="https://orcid.org/... or https://researchgate.net/..." className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600" />
+            <div className="space-y-2">
+              <input type="text" value={authorsText} onChange={(e) => setAuthorsText(e.target.value)} placeholder="Authors, comma-separated" className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600" />
+              <select value={publicationType} onChange={(e) => setPublicationType(e.target.value)} className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600"><option value="">Select publication type</option><option>Research Paper</option><option>Journal</option><option>Conference Proceedings</option><option>Book Chapter</option><option>Thesis</option></select>
+              <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600"><option value="">Select publication status</option><option>Published</option><option>Accepted</option><option>Under Review</option><option>Preprint</option></select>
+              <input type="text" value={year} onChange={(e) => setYear(e.target.value)} placeholder="Publication date" className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600" />
+              <input type="url" value={publicationUrl} onChange={(e) => setPublicationUrl(e.target.value)} placeholder="DOI or external URL (optional)" className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600" />
+            </div>
+          )}
+
+          {contentType === 'article' && (
+            <input type="text" value={subtitle} onChange={(e) => setSubtitle(e.target.value)} placeholder="Subtitle (optional)" className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600" />
+          )}
+
+          {(contentType === 'achievement' || contentType === 'opportunity') && (
+            <input type="text" value={year} onChange={(e) => setYear(e.target.value)} placeholder={contentType === 'achievement' ? 'Achievement date (optional)' : 'Deadline (optional)'} className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600" />
+          )}
+
+          {contentType === 'opportunity' && (
+            <div className="space-y-2">
+              <textarea rows={2} value={solution} onChange={(e) => setSolution(e.target.value)} placeholder="Requirements (one per line)" className="w-full p-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600" />
+              <input type="text" value={docUrl} onChange={(e) => setDocUrl(e.target.value)} placeholder="Location (optional)" className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600" />
             </div>
           )}
 
@@ -428,7 +496,7 @@ export const CreateModal: React.FC = () => {
 
           <div>
             <label className="block text-xs font-bold text-slate-800 mb-1">Detailed Description / Abstract *</label>
-            <textarea required rows={3} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Describe the architectural problem, methodology, and outcome..." className="w-full p-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600" />
+            <textarea required rows={5} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Enter the full description, abstract, or article content..." className="w-full p-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600" />
           </div>
 
           <div className="pt-2 border-t border-slate-100 flex justify-end gap-2">

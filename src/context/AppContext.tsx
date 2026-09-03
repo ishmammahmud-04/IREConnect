@@ -14,7 +14,9 @@ import {
   ConnectionRequest,
   ModerationReport,
   VerificationRequest,
-  WorkflowItem
+  WorkflowItem,
+  FeedComment,
+  FeedReactionSummary
 } from '../types';
 import { supabase } from '../lib/supabase';
 
@@ -113,6 +115,12 @@ interface AppContextType {
   hydratePersistedContent: (data: { projects: Project[]; achievements: Achievement[]; publications: Publication[]; articles: Article[]; opportunities: Opportunity[]; announcements: Announcement[]; events?: DepartmentEvent[]; milestones?: DepartmentMilestone[] }) => void;
   hydrateDirectory: (users: User[]) => void;
   hydrateWorkflows: (workflows: WorkflowItem[]) => void;
+  feedComments: FeedComment[];
+  feedReactions: Record<string, FeedReactionSummary>;
+  hydrateFeedInteractions: (comments: FeedComment[], reactions: Record<string, FeedReactionSummary>) => void;
+  toggleFeedReaction: (contentId: string) => Promise<void>;
+  addFeedComment: (contentId: string, body: string) => Promise<void>;
+  deleteFeedComment: (commentId: string) => Promise<void>;
   
   // Active modals
   selectedArticle: Article | null;
@@ -178,6 +186,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [currentUser, setCurrentUser] = useState<User>(emptyUser);
   const [isAdmin, setIsAdmin] = useState(false);
   const [currentTab, setCurrentTabState] = useState<MainTab>('home');
+  const [feedComments, setFeedComments] = useState<FeedComment[]>([]);
+  const [feedReactions, setFeedReactions] = useState<Record<string, FeedReactionSummary>>({});
   const [users, setUsers] = useState<User[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
@@ -677,6 +687,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updated_at: new Date().toISOString()
     };
     setWorkflowItems((prev) => [workflowItem, ...prev.filter((item) => item.id !== workflowItem.id)]);
+    void supabase.from('workflow_items').insert({
+      id: workflowItem.id,
+      workflow_type: workflowItem.workflow_type,
+      requester_id: workflowItem.requester_id,
+      recipient_id: workflowItem.recipient_id,
+      status: workflowItem.status,
+      data: workflowItem.data,
+      created_at: workflowItem.created_at,
+      updated_at: workflowItem.updated_at
+    }).then(({ error }) => {
+      if (error) showToast('Report could not be saved.');
+    });
     showToast('Report submitted confidentially to Department Administration.');
     setIsReportModalOpen(false);
   };
@@ -926,6 +948,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
   const hydrateNotifications = (nextNotifications: AppNotification[]) => setNotifications(nextNotifications);
   const hydrateWorkflows = (nextWorkflows: WorkflowItem[]) => setWorkflowItems(nextWorkflows);
+  const hydrateFeedInteractions = (comments: FeedComment[], reactions: Record<string, FeedReactionSummary>) => {
+    setFeedComments(comments);
+    setFeedReactions(reactions);
+  };
+  const toggleFeedReaction = async (contentId: string) => {
+    if (!currentUser.id) return;
+    const existing = feedReactions[contentId]?.reacted;
+    const query = supabase.from('content_reactions');
+    const result = existing
+      ? await query.delete().eq('content_id', contentId).eq('user_id', currentUser.id)
+      : await query.upsert({ content_id: contentId, user_id: currentUser.id, reaction: 'like' }, { onConflict: 'content_id,user_id' });
+    if (result.error) { showToast('Reaction could not be saved.'); return; }
+    setFeedReactions((previous) => ({
+      ...previous,
+      [contentId]: { count: Math.max(0, (previous[contentId]?.count || 0) + (existing ? -1 : 1)), reacted: !existing }
+    }));
+  };
+  const addFeedComment = async (contentId: string, body: string) => {
+    const trimmed = body.trim();
+    if (!currentUser.id || !trimmed) return;
+    const { data, error } = await supabase.from('content_comments')
+      .insert({ content_id: contentId, user_id: currentUser.id, body: trimmed })
+      .select().single();
+    if (error) { showToast('Comment could not be posted.'); return; }
+    setFeedComments((previous) => [...previous, { id: data.id, contentId: data.content_id, userId: data.user_id, body: data.body, createdAt: data.created_at }]);
+  };
+  const deleteFeedComment = async (commentId: string) => {
+    const { error } = await supabase.from('content_comments').delete().eq('id', commentId).eq('user_id', currentUser.id);
+    if (error) { showToast('Comment could not be deleted.'); return; }
+    setFeedComments((previous) => previous.filter((comment) => comment.id !== commentId));
+  };
 
   const hydratePersistedContent = (data: { projects: Project[]; achievements: Achievement[]; publications: Publication[]; articles: Article[]; opportunities: Opportunity[]; announcements: Announcement[]; events?: DepartmentEvent[]; milestones?: DepartmentMilestone[] }) => {
     const merge = <T extends { id: string }>(existing: T[], persisted: T[]) => [...persisted, ...existing.filter((item) => !persisted.some((storedItem) => storedItem.id === item.id))];
@@ -1127,6 +1180,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     markNotificationAsRead,
     hydrateNotifications,
     hydrateWorkflows,
+    feedComments,
+    feedReactions,
+    hydrateFeedInteractions,
+    toggleFeedReaction,
+    addFeedComment,
+    deleteFeedComment,
     hydratePersistedAccount,
     hydratePersistedContent,
     hydrateDirectory,
@@ -1254,6 +1313,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     markNotificationAsRead,
     hydrateNotifications,
     hydrateWorkflows,
+    feedComments,
+    feedReactions,
+    hydrateFeedInteractions,
+    toggleFeedReaction,
+    addFeedComment,
+    deleteFeedComment,
     hydratePersistedAccount,
     hydratePersistedContent,
     hydrateDirectory,
