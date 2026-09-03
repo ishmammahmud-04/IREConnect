@@ -434,31 +434,33 @@ const profileRowToDirectoryUser = (profile: Record<string, unknown>): User => {
   });
 };
 
-const notificationRowToAppNotification = (notification: Record<string, unknown>): AppNotification => ({
+const notificationRowToAppNotification = (notification: Record<string, unknown>): AppNotification => {
+  const notificationType = typeof notification.notification_type === 'string' ? notification.notification_type : 'verification';
+  const supportedTypes: AppNotification['type'][] = ['connection', 'mentorship', 'opportunity', 'announcement', 'event', 'message', 'verification', 'content_interaction'];
+  const type = supportedTypes.includes(notificationType as AppNotification['type'])
+    ? notificationType as AppNotification['type']
+    : 'verification';
+  const createdAt = typeof notification.created_at === 'string' ? new Date(notification.created_at) : null;
+  const hasValidDate = createdAt && !Number.isNaN(createdAt.getTime());
+
+  return {
   id: String(notification.id),
-  title: String(notification.title),
-  message: String(notification.message),
-  time: notification.created_at ? new Date(String(notification.created_at)).toLocaleString() : 'Just now',
-  isToday: notification.created_at ? new Date(String(notification.created_at)).toDateString() === new Date().toDateString() : true,
-  isRead: Boolean(notification.is_read),
-  type: notification.notification_type === 'connection'
-    || notification.notification_type === 'mentorship'
-    || notification.notification_type === 'opportunity'
-    || notification.notification_type === 'announcement'
-    || notification.notification_type === 'event'
-    || notification.notification_type === 'message'
-    || notification.notification_type === 'content_interaction'
-    ? notification.notification_type as AppNotification['type']
-    : 'verification',
-  destination: notification.notification_type === 'connection' || notification.notification_type === 'mentorship' || notification.notification_type === 'message'
+  title: typeof notification.title === 'string' && notification.title.trim() ? notification.title : 'New notification',
+  message: typeof notification.message === 'string' && notification.message.trim() ? notification.message : 'You have a new update.',
+  time: hasValidDate ? createdAt.toLocaleString() : 'Just now',
+  isToday: hasValidDate ? createdAt.toDateString() === new Date().toDateString() : true,
+  isRead: notification.is_read === true,
+  type,
+  destination: type === 'connection' || type === 'mentorship' || type === 'message'
     ? 'network'
-    : notification.notification_type === 'opportunity'
+    : type === 'opportunity'
       ? 'opportunities'
-      : notification.notification_type === 'announcement' || notification.notification_type === 'event'
+      : type === 'announcement' || type === 'event'
         ? 'department'
-        : 'profile',
-  avatar: typeof notification.avatar_url === 'string' ? notification.avatar_url : undefined
-});
+        : type === 'content_interaction' ? 'home' : 'profile',
+  avatar: typeof notification.avatar_url === 'string' && notification.avatar_url.trim() ? notification.avatar_url : undefined
+  };
+};
 
 const normalizePersistedContent = <T extends Record<string, unknown>>(record: T, ownerId?: string | null): T => {
 if (!record || typeof record !== 'object') return record;

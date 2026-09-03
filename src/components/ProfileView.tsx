@@ -28,7 +28,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
     showToast,
     getConnectionCount
     , getConnectionStatus,
-    openChat
+    openChat,
+    feedComments,
+    feedReactions
   } = useApp();
 
   const user = userOverride || currentUser;
@@ -117,6 +119,23 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
   const userArticles = (articles || []).filter((article) => sameOwner(article.ownerId) || article.author?.id === user.id);
   const userOpportunities = (opportunities || []).filter((opportunity) => sameOwner(opportunity.ownerId));
   const postedContentCount = userProjects.length + userAchievements.length + userPublications.length + userArticles.length + userOpportunities.length;
+  const activityItems = [
+    ...userProjects.filter((project) => sameOwner(project.ownerId) && canViewProjects).map((project) => ({
+      id: project.id, type: 'Project', title: project.title, summary: project.description, date: project.year, icon: 'science', color: 'text-blue-600', open: () => setSelectedProject(project)
+    })),
+    ...userAchievements.filter((achievement) => canViewAchievements).map((achievement) => ({
+      id: achievement.id, type: 'Award', title: achievement.title, summary: achievement.description, date: achievement.date, icon: 'emoji_events', color: 'text-amber-600', open: () => setSelectedAchievement(achievement)
+    })),
+    ...userPublications.filter((publication) => canViewPublications).map((publication) => ({
+      id: publication.id, type: 'Publication', title: publication.title, summary: publication.abstract, date: publication.date, icon: 'article', color: 'text-emerald-600', open: () => setSelectedPublication(publication)
+    })),
+    ...userArticles.map((article) => ({
+      id: article.id, type: 'Article', title: article.title, summary: article.subtitle, date: article.date, icon: 'auto_stories', color: 'text-indigo-600', open: () => setSelectedArticle(article)
+    })),
+    ...userOpportunities.map((opportunity) => ({
+      id: opportunity.id, type: 'Opportunity', title: opportunity.title, summary: opportunity.description, date: opportunity.deadline, icon: 'work', color: 'text-rose-600', open: () => setSelectedOpportunity(opportunity)
+    }))
+  ].sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 6);
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto animate-in fade-in duration-300 pb-16">
@@ -305,7 +324,39 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
         </div>
       </section>
 
-      <ProfileCompletenessCard user={user} />
+      {isOwnProfile && <ProfileCompletenessCard user={user} />}
+
+      {activityItems.length > 0 && (
+        <section className="bg-white rounded-xl border border-slate-200 p-5 shadow-2xs space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-heading text-sm font-bold text-slate-900">Recent Activity</h2>
+              <p className="text-[11px] text-slate-500">Published work and community activity from this profile.</p>
+            </div>
+            <span className="material-symbols-outlined text-blue-600">dynamic_feed</span>
+          </div>
+          <div className="space-y-2">
+            {activityItems.map((item) => {
+              const comments = feedComments.filter((comment) => comment.contentId === item.id).length;
+              const reactions = feedReactions[item.id]?.count || 0;
+              return (
+                <button type="button" key={`${item.type}-${item.id}`} onClick={item.open} className="flex w-full items-start gap-3 rounded-lg border border-slate-200 p-3 text-left transition-colors hover:border-blue-500 hover:bg-slate-50">
+                  <span className={`material-symbols-outlined mt-0.5 ${item.color}`}>{item.icon}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex flex-wrap items-center gap-1.5 text-[10px] text-slate-500">
+                      <span className="font-bold uppercase tracking-wider">{item.type}</span>
+                      {item.date && <span>· {item.date}</span>}
+                    </span>
+                    <strong className="mt-0.5 block truncate text-xs text-slate-900">{item.title}</strong>
+                    <span className="mt-0.5 block line-clamp-1 text-[11px] text-slate-500">{item.summary}</span>
+                    <span className="mt-1 block text-[10px] text-slate-500">{reactions} reaction{reactions === 1 ? '' : 's'} · {comments} comment{comments === 1 ? '' : 's'}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Grid: Bio, CV, Skills */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4">

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { AppNotification } from '../types';
 import { useApp } from '../context/AppContext';
 
@@ -24,12 +24,6 @@ export const NotificationsModal: React.FC = () => {
   } = useApp();
 
   const unreadCount = notifications.filter((notification) => !notification.isRead).length;
-  useEffect(() => {
-    if (isNotificationsModalOpen && unreadCount > 0) {
-      void markNotificationsAsRead();
-    }
-  }, [isNotificationsModalOpen]);
-
   if (!isNotificationsModalOpen) return null;
 
   const openNotification = (notification: AppNotification) => {
@@ -101,7 +95,7 @@ export const NotificationsModal: React.FC = () => {
                   />
                 ) : (
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500">
-                    <span className="material-symbols-outlined text-[17px]">{notificationIcons[notification.type]}</span>
+                    <span className="material-symbols-outlined text-[17px]">{notificationIcons[notification.type] || 'notifications'}</span>
                   </div>
                 )}
                 <div className="min-w-0 flex-1">

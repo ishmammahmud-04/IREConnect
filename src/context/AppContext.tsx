@@ -922,22 +922,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const markNotificationsAsRead = async () => {
+    const previousNotifications = notifications;
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
     const { error } = await supabase.from('notifications').update({ is_read: true }).eq('user_id', currentUser.id).eq('is_read', false);
     if (error) {
+      setNotifications(previousNotifications);
       showToast(`Could not save notification status: ${error.message}`);
       return;
     }
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
     showToast('All notifications marked as read');
   };
 
   const markNotificationAsRead = async (notificationId: string) => {
+    const previousNotifications = notifications;
+    setNotifications((prev) => prev.map((notification) => notification.id === notificationId ? { ...notification, isRead: true } : notification));
     const { error } = await supabase.from('notifications').update({ is_read: true }).eq('id', notificationId).eq('user_id', currentUser.id);
     if (error) {
+      setNotifications(previousNotifications);
       showToast(`Could not save notification status: ${error.message}`);
       return;
     }
-    setNotifications((prev) => prev.map((notification) => notification.id === notificationId ? { ...notification, isRead: true } : notification));
   };
 
   const hydratePersistedAccount = ({ user, notifications: persistedNotifications, savedItemIds: persistedSavedItemIds, isAdmin: persistedIsAdmin = false }: { user: User; notifications: AppNotification[]; savedItemIds: string[]; isAdmin?: boolean }) => {

@@ -169,13 +169,15 @@ export const Header: React.FC = () => {
 
           <button
             onClick={() => setIsNotificationsModalOpen(true)}
-            aria-label="Notifications"
+            aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
             className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors relative"
             title="Notifications"
           >
             <span className="material-symbols-outlined text-[18px]">notifications</span>
             {unreadCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white"></span>
+              <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 bg-red-500 rounded-full ring-2 ring-white text-[9px] leading-4 text-center font-bold text-white">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
             )}
           </button>
 

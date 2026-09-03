@@ -294,7 +294,7 @@ export interface AppNotification {
   isToday: boolean;
   isRead: boolean;
   type: 'connection' | 'mentorship' | 'opportunity' | 'announcement' | 'event' | 'message' | 'verification' | 'content_interaction';
-  destination?: 'network' | 'opportunities' | 'department' | 'profile';
+  destination?: 'home' | 'network' | 'opportunities' | 'department' | 'profile';
   avatar?: string;
 }
 
