@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
 type AuthMode = 'login' | 'register' | 'confirmation' | 'forgot' | 'recovery';
@@ -13,6 +13,7 @@ export const AuthScreen: React.FC<{ adminOnly?: boolean }> = ({ adminOnly = fals
   const [studentId, setStudentId] = useState('');
   const [hasAcceptedPolicies, setHasAcceptedPolicies] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -34,13 +35,19 @@ export const AuthScreen: React.FC<{ adminOnly?: boolean }> = ({ adminOnly = fals
     const finalizeAuth = async () => {
       try {
         if (code) {
-          await supabase.auth.exchangeCodeForSession(code);
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          if (exchangeError) throw exchangeError;
         }
         if (tokenHash) {
-          await supabase.auth.getSession();
+          const { error: verifyError } = await supabase.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: isRecovery ? 'recovery' : 'signup'
+          });
+          if (verifyError) throw verifyError;
         }
       } catch (callbackError) {
         console.error('Auth callback failed:', callbackError);
+        setError(getAuthErrorMessage(callbackError));
         if (isRecovery) setMode('recovery');
       } finally {
         if (isRecovery) return;
@@ -54,80 +61,107 @@ export const AuthScreen: React.FC<{ adminOnly?: boolean }> = ({ adminOnly = fals
   const resetStatus = () => setError(null);
 
   const requestPasswordReset = async () => {
+    if (submittingRef.current) return;
     setError(null);
     const normalizedEmail = email.trim().toLowerCase();
     if (!isUftbEmail(normalizedEmail)) {
       setError('Only UFTB email addresses can access this network.');
       return;
     }
+    submittingRef.current = true;
     setIsSubmitting(true);
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(normalizedEmail, { redirectTo: `${window.location.origin}/` });
-    setIsSubmitting(false);
-    if (resetError) {
-      setError(resetError.message);
-      return;
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(normalizedEmail, { redirectTo: `${window.location.origin}/` });
+      if (resetError) throw resetError;
+      setEmail(normalizedEmail);
+      setMode('confirmation');
+    } catch (resetError) {
+      setError(getAuthErrorMessage(resetError));
+    } finally {
+      submittingRef.current = false;
+      setIsSubmitting(false);
     }
-    setEmail(normalizedEmail);
-    setMode('confirmation');
   };
 
   const updatePassword = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (submittingRef.current) return;
     setError(null);
+    submittingRef.current = true;
     setIsSubmitting(true);
-    const { error: updateError } = await supabase.auth.updateUser({ password });
-    setIsSubmitting(false);
-    if (updateError) {
-      setError(updateError.message);
-      return;
+    try {
+      const { error: updateError } = await supabase.auth.updateUser({ password });
+      if (updateError) throw updateError;
+      await supabase.auth.signOut();
+      window.history.replaceState({}, '', window.location.pathname);
+      setPassword('');
+      setMode('login');
+    } catch (updateError) {
+      setError(getAuthErrorMessage(updateError));
+    } finally {
+      submittingRef.current = false;
+      setIsSubmitting(false);
     }
-    await supabase.auth.signOut();
-    window.history.replaceState({}, '', window.location.pathname);
-    setPassword('');
-    setMode('login');
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (submittingRef.current) return;
     setError(null);
+    const normalizedEmail = email.trim().toLowerCase();
+    setEmail(normalizedEmail);
+    if (adminOnly && mode !== 'login') {
+      setError('Administrator accounts cannot be created here. Sign in with an authorized administrator account.');
+      return;
+    }
     setIsSubmitting(true);
+    submittingRef.current = true;
 
     try {
-      if (!isUftbEmail(email)) throw new Error('Only UFTB email addresses can access this network.');
+      if (!isUftbEmail(normalizedEmail)) throw new Error('Use your UFTB email address (for example, name@uftb.ac.bd).');
       if (mode === 'login') {
-        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
         if (signInError) {
           if (signInError.message.toLowerCase().includes('not confirmed')) {
             throw new Error('Your email is not confirmed yet. Re-send the confirmation email or confirm the Supabase Auth redirect URL is configured correctly.');
           }
-          throw signInError;
+          throw new Error(getAuthErrorMessage(signInError));
         }
         return;
       }
 
       const { data, error: signUpError } = await supabase.auth.signUp({
-        email,
+        email: normalizedEmail,
         password,
         options: {
           data: { full_name: name, role, batch: batch.trim(), student_id: studentId.trim(), terms_accepted: true, privacy_policy_accepted: true },
           emailRedirectTo: window.location.origin
         }
       });
-      if (signUpError) throw signUpError;
+      if (signUpError) throw new Error(getAuthErrorMessage(signUpError));
       if (!data.session) setMode('confirmation');
     } catch (authError) {
-      setError(authError instanceof Error ? authError.message : 'Something went wrong. Please try again.');
+      setError(getAuthErrorMessage(authError));
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   };
 
   const resendConfirmation = async () => {
+    if (submittingRef.current) return;
     setError(null);
+    submittingRef.current = true;
     setIsSubmitting(true);
-    const { error: resendError } = await supabase.auth.resend({ type: 'signup', email });
-    setIsSubmitting(false);
-    if (resendError) setError(resendError.message);
+    try {
+      const { error: resendError } = await supabase.auth.resend({ type: 'signup', email: email.trim().toLowerCase() });
+      if (resendError) throw resendError;
+    } catch (resendError) {
+      setError(getAuthErrorMessage(resendError));
+    } finally {
+      submittingRef.current = false;
+      setIsSubmitting(false);
+    }
   };
 
   if (mode === 'confirmation') {
@@ -265,4 +299,15 @@ const AuthLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   </main>
 );
 
-const isUftbEmail = (email: string) => /^[^\s@]+@uftb\.[a-z]{2,}(?:\.[a-z]{2,})?$/i.test(email.trim());
+const isUftbEmail = (email: string) => /^[^\s@]+@uftb\.ac\.bd$/i.test(email.trim());
+
+const getAuthErrorMessage = (authError: unknown) => {
+  const message = authError instanceof Error ? authError.message : '';
+  const normalized = message.toLowerCase();
+  if (normalized.includes('invalid login credentials')) return 'Email or password is incorrect.';
+  if (normalized.includes('email not confirmed') || normalized.includes('not confirmed')) return 'Your email is not confirmed yet. Check your inbox for the verification link.';
+  if (normalized.includes('user already registered')) return 'An account with this email already exists. Try signing in instead.';
+  if (normalized.includes('password')) return 'Password must be at least 6 characters.';
+  if (normalized.includes('rate limit')) return 'Too many attempts. Please wait a moment and try again.';
+  return message || 'Something went wrong. Please try again.';
+};

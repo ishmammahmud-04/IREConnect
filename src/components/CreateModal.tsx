@@ -1,6 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { ImageCropModal } from './ImageCropModal';
+import type { Achievement, Announcement, Opportunity, Project } from '../types';
+
+const projectCategories: Project['category'][] = ['Robotics', 'AI', 'IoT', 'Embedded Systems', 'Assistive Tech', 'Computer Vision', 'Autonomous Systems'];
+const achievementCategories: Achievement['category'][] = ['Award', 'Competition', 'Certification', 'Hackathon', 'Patent', 'Scholarship', 'Professional Milestone'];
+const opportunityTypes: Opportunity['type'][] = ['Internship', 'Job', 'Research', 'Collaboration', 'Scholarship', 'Competition'];
+const announcementCategories: Announcement['category'][] = ['Exam Notice', 'Workshop', 'Competition', 'Equipment', 'General', 'Announcement'];
 
 const contentTypeOptions = [
   { type: 'project', label: 'Project', icon: 'science' },
@@ -54,8 +60,10 @@ export const CreateModal: React.FC = () => {
   const [subtitle, setSubtitle] = useState('');
   const [publicationType, setPublicationType] = useState('');
   const [coverImage, setCoverImage] = useState('');
+  const [coverFileName, setCoverFileName] = useState('');
   const [pendingCropCover, setPendingCropCover] = useState<File | null>(null);
   const [pdfUrl, setPdfUrl] = useState('');
+  const [pdfFileName, setPdfFileName] = useState('');
   const [supervisorName, setSupervisorName] = useState('');
   const [teamMembersText, setTeamMembersText] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -79,7 +87,9 @@ export const CreateModal: React.FC = () => {
     setSubtitle('');
     setPublicationType('');
     setCoverImage('');
+    setCoverFileName('');
     setPdfUrl('');
+    setPdfFileName('');
     setSupervisorName('');
     setTeamMembersText('');
   };
@@ -106,9 +116,11 @@ export const CreateModal: React.FC = () => {
       setSubtitle(item.subtitle || '');
       setPublicationType(item.publicationType || '');
       setCoverImage(item.coverImage || item.image || '');
+      setCoverFileName(item.coverImage || item.image ? 'Current cover image' : '');
       setPdfUrl(item.pdfUrl || item.docUrl || item.certificateUrl || '');
+      setPdfFileName(item.pdfUrl || item.docUrl || item.certificateUrl ? 'Current PDF attachment' : '');
       setSupervisorName(item.supervisor?.name || '');
-      setTeamMembersText((item.teamMembers || []).map((member: any) => `${member.name}${member.role ? ` - ${member.role}` : ''}`).join('\n') || '');
+      setTeamMembersText((item.teamMembers || []).map((member) => `${member.name}${member.role ? ` - ${member.role}` : ''}`).join('\n') || '');
       return;
     }
     const requestedType = ['project', 'publication', 'achievement', 'article', 'opportunity', 'announcement'].includes(createModalInitialType || '')
@@ -140,8 +152,15 @@ export const CreateModal: React.FC = () => {
   const handleImageInput = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith('image/')) {
+    const isAllowedImage = ['image/jpeg', 'image/png', 'image/webp', 'image/bmp'].includes(file.type)
+      || /\.(jpe?g|png|webp|bmp)$/i.test(file.name);
+    if (!isAllowedImage) {
       showToast('Only standard image files are allowed. GIFs and videos are not supported.');
+      event.target.value = '';
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('Cover images must be 5 MB or smaller.');
       event.target.value = '';
       return;
     }
@@ -175,8 +194,11 @@ export const CreateModal: React.FC = () => {
     }
     try {
       setPdfUrl(await fileToDataUrl(file));
+      setPdfFileName(file.name);
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'Could not load the selected PDF.');
+    } finally {
+      event.target.value = '';
     }
   };
 
@@ -260,7 +282,7 @@ export const CreateModal: React.FC = () => {
         id: sharedBase.id,
         title: trimmedTitle,
         description: trimmedDesc,
-        category: (trimmedCategory || 'General') as 'Competition' | 'Workshop' | 'General' | 'Exam Notice' | 'Announcement',
+        category: announcementCategories.includes(trimmedCategory as Announcement['category']) ? trimmedCategory as Announcement['category'] : 'General',
         isPinned: false,
         author: currentUser.name,
         date: 'Just now'
@@ -269,7 +291,7 @@ export const CreateModal: React.FC = () => {
     } else if (contentType === 'project') {
       const projectItem = {
         ...sharedBase,
-        category: trimmedCategory as any,
+        category: projectCategories.includes(trimmedCategory as Project['category']) ? trimmedCategory as Project['category'] : 'Robotics',
         batch: batch.trim(),
         year: trimmedYear,
         problem: trimmedProblem,
@@ -330,7 +352,7 @@ export const CreateModal: React.FC = () => {
     } else if (contentType === 'achievement') {
       const achievementItem = {
         ...sharedBase,
-        category: (trimmedCategory as any) || 'Award',
+        category: achievementCategories.includes(trimmedCategory as Achievement['category']) ? trimmedCategory as Achievement['category'] : 'Award',
         organization: trimmedSecondaryField,
         personName: currentUser.name,
         personRole: currentUser.headline,
@@ -382,7 +404,7 @@ export const CreateModal: React.FC = () => {
         ...sharedBase,
         organization: trimmedSecondaryField,
         organizationLogo: coverImage || '',
-        type: (category as any) || 'Internship',
+        type: opportunityTypes.includes(category as Opportunity['type']) ? category as Opportunity['type'] : 'Internship',
         description: trimmedDesc,
         requirements: [],
         requiredSkills: tagArray,
@@ -420,20 +442,21 @@ export const CreateModal: React.FC = () => {
           onApply={async (croppedFile) => {
             const dataUrl = await fileToDataUrl(croppedFile);
             setCoverImage(dataUrl);
+            setCoverFileName(croppedFile.name);
             setPendingCropCover(null);
           }}
         />
       )}
-      <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex justify-center items-center p-4 overflow-y-auto animate-in fade-in duration-200">
+      <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex justify-center items-center p-4 overflow-y-auto animate-in fade-in duration-200" role="dialog" aria-modal="true" aria-labelledby="create-content-title">
         <div className="bg-white w-full max-w-xl max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-xl border border-slate-200 shadow-2xl my-4 relative animate-in zoom-in-95 duration-200">
         <div className="sticky top-0 z-10 px-5 py-3 border-b border-slate-200 bg-white flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <span className="material-symbols-outlined text-blue-600 text-[18px]">add_circle</span>
-            <h2 className="font-heading text-sm font-bold text-slate-900">
+            <h2 id="create-content-title" className="font-heading text-sm font-bold text-slate-900">
               {createModalEditingItem ? 'Update Published Content' : 'Publish New Content'}
             </h2>
           </div>
-          <button type="button" onClick={closeModal} className="p-1 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors">
+          <button type="button" onClick={closeModal} aria-label="Close publish dialog" className="min-h-11 min-w-11 p-1 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors">
             <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
         </div>
@@ -471,11 +494,11 @@ export const CreateModal: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-slate-800 mb-1">Category / Type</label>
-              <input type="text" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Enter category or type" className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600" />
+              <input aria-label="Category or type" type="text" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Enter category or type" className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600" />
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-800 mb-1">{contentType === 'publication' ? 'Journal / Conference' : contentType === 'achievement' ? 'Awarding Body' : 'Organization / Affiliation'}</label>
-              <input type="text" value={secondaryField} onChange={(e) => setSecondaryField(e.target.value)} placeholder="Enter organization, journal, or venue" className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600" />
+              <input aria-label={contentType === 'publication' ? 'Journal or conference' : contentType === 'achievement' ? 'Awarding body' : 'Organization or affiliation'} type="text" value={secondaryField} onChange={(e) => setSecondaryField(e.target.value)} placeholder="Enter organization, journal, or venue" className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600" />
             </div>
           </div>
 
@@ -518,7 +541,7 @@ export const CreateModal: React.FC = () => {
           )}
 
           {contentType === 'article' && (
-            <input type="text" value={subtitle} onChange={(e) => setSubtitle(e.target.value)} placeholder="Subtitle (optional)" className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600" />
+            <input aria-label="Subtitle (optional)" type="text" value={subtitle} onChange={(e) => setSubtitle(e.target.value)} placeholder="Subtitle (optional)" className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600" />
           )}
 
           {(contentType === 'achievement' || contentType === 'opportunity') && (
@@ -539,14 +562,29 @@ export const CreateModal: React.FC = () => {
 
           <div>
             <label className="block text-xs font-bold text-slate-800 mb-1">Cover photo</label>
-            <input type="file" accept="image/jpeg,image/png,image/webp,image/bmp" onChange={handleImageInput} className="w-full text-xs text-slate-700 file:mr-2 file:py-1.5 file:px-2 file:rounded file:border file:border-slate-200 file:bg-slate-100 file:text-slate-700" />
-            {coverImage && <img src={coverImage} alt="Selected cover" className="mt-2 h-20 w-full object-cover rounded-lg border border-slate-200" />}
+            <input aria-label="Cover photo" type="file" accept="image/jpeg,image/png,image/webp,image/bmp" onChange={handleImageInput} className="w-full text-xs text-slate-700 file:mr-2 file:py-1.5 file:px-2 file:rounded file:border file:border-slate-200 file:bg-slate-100 file:text-slate-700" />
+            <p className="mt-1 text-[10px] text-slate-500">JPG, PNG, WEBP, or BMP · maximum 5 MB. Images are cropped to a 16:9 cover.</p>
+            {coverImage && (
+              <div className="mt-2 space-y-1">
+                <div className="flex items-center justify-between gap-2 text-[10px] text-slate-600">
+                  <span className="truncate" title={coverFileName}>{coverFileName}</span>
+                  <button type="button" onClick={() => { setCoverImage(''); setCoverFileName(''); }} className="shrink-0 rounded border border-slate-200 px-2 py-1 font-bold text-slate-600 hover:bg-slate-50">Remove</button>
+                </div>
+                <img src={coverImage} alt="Selected cover" className="h-20 w-full rounded-lg border border-slate-200 object-cover" />
+              </div>
+            )}
           </div>
 
           <div>
             <label className="block text-xs font-bold text-slate-800 mb-1">Attach PDF</label>
-            <input type="file" accept="application/pdf,.pdf" onChange={handlePdfInput} className="w-full text-xs text-slate-700 file:mr-2 file:rounded file:border file:border-slate-200 file:bg-slate-100 file:px-2 file:py-1.5 file:text-slate-700" />
-            {pdfUrl && <p className="mt-1 text-[10px] font-semibold text-emerald-600">PDF attached and ready to read or download.</p>}
+            <input aria-label="Attach PDF" type="file" accept="application/pdf,.pdf" onChange={handlePdfInput} className="w-full text-xs text-slate-700 file:mr-2 file:rounded file:border file:border-slate-200 file:bg-slate-100 file:px-2 file:py-1.5 file:text-slate-700" />
+            <p className="mt-1 text-[10px] text-slate-500">PDF only · maximum 10 MB.</p>
+            {pdfUrl && (
+              <div className="mt-1 flex items-center justify-between gap-2 rounded-lg border border-emerald-100 bg-emerald-50 px-2.5 py-1.5">
+                <span className="truncate text-[10px] font-semibold text-emerald-700" title={pdfFileName}>{pdfFileName}</span>
+                <button type="button" onClick={() => { setPdfUrl(''); setPdfFileName(''); }} className="shrink-0 rounded border border-emerald-200 bg-white px-2 py-1 text-[10px] font-bold text-emerald-700 hover:bg-emerald-100">Remove</button>
+              </div>
+            )}
           </div>
 
           <div>

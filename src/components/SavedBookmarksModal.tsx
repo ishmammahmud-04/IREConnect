@@ -34,7 +34,7 @@ export const SavedBookmarksModal: React.FC = () => {
     (savedAchievements?.length || 0);
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex justify-center items-center p-4 overflow-y-auto animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex justify-center items-center p-4 overflow-y-auto animate-in fade-in duration-200" role="dialog" aria-modal="true" aria-label="Saved bookmarks">
       <div className="bg-white w-full max-w-xl rounded-xl border border-slate-200 shadow-2xl overflow-hidden my-4 relative animate-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="px-5 py-3 border-b border-slate-200 flex items-center justify-between">
@@ -47,7 +47,9 @@ export const SavedBookmarksModal: React.FC = () => {
             </h2>
           </div>
           <button
+            type="button"
             onClick={() => setIsSavedModalOpen(false)}
+            aria-label="Close saved bookmarks"
             className="p-1 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors"
           >
             <span className="material-symbols-outlined text-[18px]">close</span>

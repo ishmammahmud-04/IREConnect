@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { User } from '../types';
 
@@ -23,25 +23,19 @@ export const FacultyProfileView: React.FC<FacultyProfileViewProps> = ({ facultyU
     showToast
   } = useApp();
 
-  const supervisedProjects = (projects || []).filter(
-    (p) =>
-      p.supervisor?.id === facultyUser.id ||
-      (p.supervisor?.name &&
-        facultyUser.name &&
-        p.supervisor.name.toLowerCase().includes(facultyUser.name.toLowerCase()))
-  );
-
-  const facultyPublications = (publications || []).filter((p) =>
-    p.ownerId === facultyUser.id || p.authors?.some(
-      (a) =>
-        a &&
-        facultyUser.name &&
-        a.toLowerCase().includes(facultyUser.name.toLowerCase())
-    )
-  );
-  const facultyAchievements = (achievements || []).filter((achievement) => achievement.ownerId === facultyUser.id || achievement.personName?.toLowerCase() === facultyUser.name?.toLowerCase());
-  const facultyArticles = (articles || []).filter((article) => article.ownerId === facultyUser.id || article.author?.id === facultyUser.id);
-  const facultyOpportunities = (opportunities || []).filter((opportunity) => opportunity.ownerId === facultyUser.id);
+  const { supervisedProjects, facultyPublications, facultyAchievements, facultyArticles, facultyOpportunities } = useMemo(() => {
+    const facultyName = facultyUser.name?.toLowerCase();
+    return {
+      supervisedProjects: (projects || []).filter((p) =>
+        p.supervisor?.id === facultyUser.id ||
+        Boolean(p.supervisor?.name && facultyName && p.supervisor.name.toLowerCase().includes(facultyName))),
+      facultyPublications: (publications || []).filter((p) =>
+        p.ownerId === facultyUser.id || Boolean(p.authors?.some((a) => a && facultyName && a.toLowerCase().includes(facultyName)))),
+      facultyAchievements: (achievements || []).filter((achievement) => achievement.ownerId === facultyUser.id || achievement.personName?.toLowerCase() === facultyName),
+      facultyArticles: (articles || []).filter((article) => article.ownerId === facultyUser.id || article.author?.id === facultyUser.id),
+      facultyOpportunities: (opportunities || []).filter((opportunity) => opportunity.ownerId === facultyUser.id)
+    };
+  }, [achievements, articles, facultyUser.id, facultyUser.name, opportunities, projects, publications]);
   const postedContentCount = facultyAchievements.length + facultyArticles.length + facultyOpportunities.length + facultyPublications.length + supervisedProjects.length;
 
   return (

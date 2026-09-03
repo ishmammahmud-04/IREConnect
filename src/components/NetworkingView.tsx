@@ -122,13 +122,14 @@ export const NetworkingView: React.FC = () => {
       {activeTab === 'connections' && (
         <div className="space-y-6">
           <div className="relative w-full">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+            <span className="material-symbols-outlined pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
             <input
               type="search"
+              aria-label="Search connections and people"
               value={networkSearchQuery}
               onChange={(event) => setNetworkSearchQuery(event.target.value)}
               placeholder="Search everyone by name, role, skill, or location..."
-              className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-xs text-slate-900 outline-none transition-all focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+              className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
             />
           </div>
           <div className="flex flex-wrap gap-2">
@@ -176,6 +177,11 @@ export const NetworkingView: React.FC = () => {
                   </button>
                 </div>
               ))}
+              {displayedPeople.length === 0 && (
+               <p className="sm:col-span-2 md:col-span-3 rounded-xl border border-slate-200 bg-white px-4 py-6 text-center text-xs text-slate-500">
+                 {networkSearchQuery.trim() ? 'No people match your search.' : 'No connection suggestions are available yet.'}
+               </p>
+              )}
             </div>
           </section>
 
@@ -185,7 +191,7 @@ export const NetworkingView: React.FC = () => {
               Your Established Connections
             </h2>
             <div className="space-y-2">
-              {(connectionList || []).map((person) => (
+              {(connectionList || []).length > 0 ? (connectionList || []).map((person) => (
                 <div
                   key={person.id}
                   className="bg-white rounded-xl border border-slate-200 p-3 shadow-2xs hover:shadow-xs transition-all flex items-center justify-between gap-3"
@@ -229,7 +235,13 @@ export const NetworkingView: React.FC = () => {
                     </button>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center">
+                  <span className="material-symbols-outlined text-[32px] text-slate-400">group</span>
+                  <h3 className="mt-2 font-heading text-sm font-bold text-slate-900">No established connections yet</h3>
+                  <p className="mt-1 text-xs text-slate-500">Connect with people you may know to grow your network.</p>
+                </div>
+              )}
             </div>
           </section>
         </div>
@@ -339,13 +351,14 @@ export const NetworkingView: React.FC = () => {
       {activeTab === 'mentorship' && (
         <div className="space-y-4">
           <div className="relative w-full">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+            <span className="material-symbols-outlined pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
             <input
+              aria-label="Search mentors"
               type="search"
               value={mentorSearchQuery}
               onChange={(event) => setMentorSearchQuery(event.target.value)}
               placeholder="Search mentors by name, expertise, or specialty..."
-              className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-xs text-slate-900 outline-none transition-all focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+              className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
             />
           </div>
           <div className="flex flex-wrap gap-2"><select value={networkRoleFilter} onChange={(event) => setNetworkRoleFilter(event.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"><option value="All">All roles</option><option value="student">Students</option><option value="alumni">Alumni</option><option value="faculty">Faculty</option></select><select value={networkBatchFilter} onChange={(event) => setNetworkBatchFilter(event.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"><option value="All">All batches</option>{Array.from(new Set((users || []).map((user) => user.batch).filter(Boolean))).sort().map((batch) => <option key={batch} value={batch}>{batch}</option>)}</select><select value={networkGraduationYear} onChange={(event) => setNetworkGraduationYear(event.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"><option value="All">All graduation years</option>{Array.from(new Set((users || []).map((user) => String(user.graduationYear || user.batch || '')).filter(Boolean))).sort().map((year) => <option key={year} value={year}>{year}</option>)}</select></div>

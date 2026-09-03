@@ -13,14 +13,16 @@ export const BottomNav: React.FC = () => {
   ];
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 w-full z-40 bg-[#0F172A] text-white border-t border-slate-800 shadow-lg px-2 py-1 pb-safe flex justify-around items-center">
+    <nav className="md:hidden fixed bottom-0 left-0 w-full z-40 bg-[#0F172A] text-white border-t border-slate-800 shadow-lg px-2 py-1 pb-safe flex justify-around items-center" aria-label="Primary navigation">
       {navItems.map((item) => {
         const isActive = currentTab === item.tab;
         return (
           <button
             key={item.tab}
+            type="button"
             onClick={() => setCurrentTab(item.tab)}
-            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all duration-200 active:scale-95 ${
+            aria-current={isActive ? 'page' : undefined}
+            className={`flex min-h-11 flex-col items-center justify-center flex-1 py-1 transition-all duration-200 active:scale-95 ${
               isActive ? 'text-blue-400 font-bold' : 'text-slate-400 hover:text-slate-200'
             }`}
           >

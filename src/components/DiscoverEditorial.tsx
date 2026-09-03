@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useApp } from '../context/AppContext';
 
 export const DiscoverEditorial: React.FC = () => {
@@ -30,42 +30,20 @@ export const DiscoverEditorial: React.FC = () => {
 
   // Filter items based on active category & global search
   const q = (globalSearchQuery || '').toLowerCase();
-
-  const filteredArticles = (articles || []).filter(
-    (a) =>
-      (!q ||
-        (a.title && a.title.toLowerCase().includes(q)) ||
-        (a.tags && a.tags.some((t) => t && t.toLowerCase().includes(q)))) &&
-      (activeDiscoverCategory === 'For You' || activeDiscoverCategory === 'Blogs')
-  );
-
-  const filteredPublications = (publications || []).filter(
-    (p) =>
-      (!q ||
-        (p.title && p.title.toLowerCase().includes(q)) ||
-        (p.keywords && p.keywords.some((k) => k && k.toLowerCase().includes(q)))) &&
-      (activeDiscoverCategory === 'For You' ||
-        activeDiscoverCategory === 'Research Papers' ||
-        activeDiscoverCategory === 'Journals')
-  );
-
-  const filteredAchievements = (achievements || []).filter(
-    (ach) =>
-      (!q ||
-        (ach.title && ach.title.toLowerCase().includes(q)) ||
-        (ach.organization && ach.organization.toLowerCase().includes(q))) &&
-      (activeDiscoverCategory === 'For You' ||
-        activeDiscoverCategory === 'Achievements' ||
-        activeDiscoverCategory === 'Certifications')
-  );
-
-  const filteredProjects = (projects || []).filter(
-    (proj) =>
-      (!q ||
-        (proj.title && proj.title.toLowerCase().includes(q)) ||
-        (proj.technologies && proj.technologies.some((t) => t && t.toLowerCase().includes(q)))) &&
-      (activeDiscoverCategory === 'For You' || activeDiscoverCategory === 'Projects')
-  );
+  const { filteredArticles, filteredPublications, filteredAchievements, filteredProjects } = useMemo(() => ({
+    filteredArticles: (articles || []).filter((a) =>
+      (!q || Boolean(a.title?.toLowerCase().includes(q)) || Boolean(a.tags?.some((t) => t?.toLowerCase().includes(q)))) &&
+      (activeDiscoverCategory === 'For You' || activeDiscoverCategory === 'Blogs')),
+    filteredPublications: (publications || []).filter((p) =>
+      (!q || Boolean(p.title?.toLowerCase().includes(q)) || Boolean(p.keywords?.some((k) => k?.toLowerCase().includes(q)))) &&
+      (activeDiscoverCategory === 'For You' || activeDiscoverCategory === 'Research Papers' || activeDiscoverCategory === 'Journals')),
+    filteredAchievements: (achievements || []).filter((ach) =>
+      (!q || Boolean(ach.title?.toLowerCase().includes(q)) || Boolean(ach.organization?.toLowerCase().includes(q))) &&
+      (activeDiscoverCategory === 'For You' || activeDiscoverCategory === 'Achievements' || activeDiscoverCategory === 'Certifications')),
+    filteredProjects: (projects || []).filter((proj) =>
+      (!q || Boolean(proj.title?.toLowerCase().includes(q)) || Boolean(proj.technologies?.some((t) => t?.toLowerCase().includes(q)))) &&
+      (activeDiscoverCategory === 'For You' || activeDiscoverCategory === 'Projects'))
+  }), [activeDiscoverCategory, articles, achievements, projects, publications, q]);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -84,6 +62,7 @@ export const DiscoverEditorial: React.FC = () => {
             </p>
           </div>
           <button
+            type="button"
             onClick={() => setIsCreateModalOpen(true)}
             className="px-4 py-2 rounded-lg bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition-all flex items-center gap-1.5 shrink-0 self-start md:self-auto shadow-xs active:scale-95"
           >
@@ -94,20 +73,22 @@ export const DiscoverEditorial: React.FC = () => {
 
         {/* Global Search Input */}
         <div className="relative w-full pt-1">
-          <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">
+          <span className="material-symbols-outlined pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">
             search
           </span>
           <input
             type="text"
+            aria-label="Search achievements, papers, blogs, projects, and technologies"
             value={globalSearchQuery}
             onChange={(e) => setGlobalSearchQuery(e.target.value)}
             placeholder="Search achievements, papers, blogs, projects, technologies..."
-            className="w-full h-10 pl-10 pr-10 rounded-xl border border-slate-200 bg-white focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none text-xs md:text-sm text-slate-900 placeholder:text-slate-400 shadow-2xs transition-all"
+            className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-10 text-sm text-slate-900 placeholder:text-slate-400 shadow-2xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
           />
           {globalSearchQuery && (
             <button
               onClick={() => setGlobalSearchQuery('')}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+              className="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+              aria-label="Clear search"
             >
               <span className="material-symbols-outlined text-[16px]">close</span>
             </button>

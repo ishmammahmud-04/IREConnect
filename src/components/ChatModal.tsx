@@ -4,6 +4,7 @@ import { ChatMessage, User } from '../types';
 import { supabase } from '../lib/supabase';
 
 const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024;
+const ACCEPTED_ATTACHMENT_EXTENSIONS = /\.(jpe?g|png|gif|webp|bmp|svg|pdf|docx?|txt|zip)$/i;
 
 export const ChatModal: React.FC = () => {
   const {
@@ -23,47 +24,63 @@ export const ChatModal: React.FC = () => {
   const [body, setBody] = useState('');
   const [attachment, setAttachment] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [isSending, setIsSending] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const attachmentInputRef = useRef<HTMLInputElement>(null);
+  const selectedUserRef = useRef<User | null>(selectedUser);
+  const conversationIdRef = useRef<string | null>(null);
   const connections = useMemo(() => getConnectionUsers('connected'), [getConnectionUsers]);
   const filteredConnections = connections.filter((user) => user.name.toLowerCase().includes(search.toLowerCase()));
 
   useEffect(() => {
-    if (isChatModalOpen && chatTargetUser) setSelectedUser(chatTargetUser);
+    if (!isChatModalOpen) return;
+    setSelectedUser(chatTargetUser);
   }, [isChatModalOpen, chatTargetUser]);
+
+  useEffect(() => {
+    selectedUserRef.current = selectedUser;
+  }, [selectedUser]);
 
   useEffect(() => {
     if (!isChatModalOpen || !selectedUser) return;
     let active = true;
+    setConversationId(null);
+    conversationIdRef.current = null;
+    setMessages([]);
+    setLoadError(null);
+    setIsLoading(true);
     const loadConversation = async () => {
-      setIsLoading(true);
-      const [first, second] = [currentUser.id, selectedUser.id].sort();
-      const { data: conversation, error: conversationError } = await supabase
-        .from('conversations')
-        .select('id')
-        .eq('participant_a', first)
-        .eq('participant_b', second)
-        .maybeSingle();
-      if (conversationError) {
-        showToast(`Could not open chat: ${conversationError.message}`);
-        setIsLoading(false);
-        return;
+      try {
+        const [first, second] = [currentUser.id, selectedUser.id].sort();
+        const { data: conversation, error: conversationError } = await supabase
+          .from('conversations')
+          .select('id')
+          .eq('participant_a', first)
+          .eq('participant_b', second)
+          .maybeSingle();
+        if (conversationError) throw conversationError;
+        if (!active) return;
+        setConversationId(conversation?.id || null);
+        conversationIdRef.current = conversation?.id || null;
+        if (conversation?.id) {
+          const { data, error } = await supabase.from('messages').select('*').eq('conversation_id', conversation.id).order('created_at', { ascending: true });
+          if (error) throw error;
+          if (active) setMessages((data || []).map(messageRowToMessage).filter((message): message is ChatMessage => message !== null));
+        }
+      } catch (error) {
+        if (active) {
+          setLoadError(error instanceof Error ? error.message : 'Could not load this conversation.');
+          showToast(error instanceof Error ? `Could not load messages: ${error.message}` : 'Could not load messages.');
+        }
+      } finally {
+        if (active) setIsLoading(false);
       }
-      if (!active) return;
-      setConversationId(conversation?.id || null);
-      if (conversation?.id) {
-        const { data, error } = await supabase.from('messages').select('*').eq('conversation_id', conversation.id).order('created_at', { ascending: true });
-        if (error) showToast(`Could not load messages: ${error.message}`);
-        if (active) setMessages((data || []).map(messageRowToMessage));
-      } else {
-        setMessages([]);
-      }
-      setIsLoading(false);
     };
     void loadConversation();
     return () => { active = false; };
-  }, [isChatModalOpen, selectedUser, currentUser.id, showToast]);
+  }, [isChatModalOpen, selectedUser, currentUser.id, showToast, loadAttempt]);
 
   useEffect(() => {
     if (!conversationId) return;
@@ -72,9 +89,21 @@ export const ChatModal: React.FC = () => {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` }, (payload) => {
         setMessages((previous) => previous.some((message) => message.id === payload.new.id) ? previous : [...previous, messageRowToMessage(payload.new)]);
       })
-      .subscribe();
-    return () => { void supabase.removeChannel(channel); };
-  }, [conversationId]);
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          showToast('Live message updates are temporarily unavailable.');
+        }
+      });
+    return () => {
+      void (async () => {
+        try {
+          await supabase.removeChannel(channel);
+        } catch {
+          // Channel cleanup is best effort.
+        }
+      })();
+    };
+  }, [conversationId, showToast]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -86,6 +115,10 @@ export const ChatModal: React.FC = () => {
     event.preventDefault();
     if (!selectedUser || (!body.trim() && !attachment) || isSending) return;
     setIsSending(true);
+    const targetUserId = selectedUser.id;
+    const messageBody = body.trim();
+    const selectedAttachment = attachment;
+    let uploadedPath: string | null = null;
     try {
       let activeConversationId = conversationId;
       if (!activeConversationId) {
@@ -97,30 +130,43 @@ export const ChatModal: React.FC = () => {
         if (error) throw error;
         activeConversationId = data.id;
         setConversationId(activeConversationId);
+        conversationIdRef.current = activeConversationId;
       }
       let attachmentUrl: string | undefined;
-      if (attachment) {
-        if (attachment.size > MAX_ATTACHMENT_SIZE) throw new Error('Attachments must be 10 MB or smaller.');
-        const path = `${currentUser.id}/${activeConversationId}/${crypto.randomUUID()}-${attachment.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-        const { error } = await supabase.storage.from('chat-media').upload(path, attachment);
+      if (selectedAttachment) {
+        if (selectedAttachment.size > MAX_ATTACHMENT_SIZE) throw new Error('Attachments must be 10 MB or smaller.');
+        if (!selectedAttachment.type.startsWith('image/') && !ACCEPTED_ATTACHMENT_EXTENSIONS.test(selectedAttachment.name)) {
+          throw new Error('Accepted attachments: images, PDF, DOC, DOCX, TXT, or ZIP.');
+        }
+        uploadedPath = `${currentUser.id}/${activeConversationId}/${crypto.randomUUID()}-${selectedAttachment.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+        const { error } = await supabase.storage.from('chat-media').upload(uploadedPath, selectedAttachment);
         if (error) throw error;
-        const { data } = supabase.storage.from('chat-media').getPublicUrl(path);
+        const { data } = supabase.storage.from('chat-media').getPublicUrl(uploadedPath);
         attachmentUrl = data.publicUrl;
       }
       const { data, error } = await supabase.from('messages').insert({
         conversation_id: activeConversationId,
         sender_id: currentUser.id,
-        body: body.trim(),
+        body: messageBody,
         attachment_url: attachmentUrl,
-        attachment_name: attachment?.name || null,
-        attachment_type: attachment?.type || null
+        attachment_name: selectedAttachment?.name || null,
+        attachment_type: selectedAttachment?.type || null
       }).select('*').single();
       if (error) throw error;
-      setMessages((previous) => previous.some((message) => message.id === data.id) ? previous : [...previous, messageRowToMessage(data)]);
-      setBody('');
-      setAttachment(null);
-      if (attachmentInputRef.current) attachmentInputRef.current.value = '';
+      if (selectedUserRef.current?.id === targetUserId && conversationIdRef.current === activeConversationId) {
+        setMessages((previous) => previous.some((message) => message.id === data.id) ? previous : [...previous, messageRowToMessage(data)]);
+        setBody('');
+        setAttachment(null);
+        if (attachmentInputRef.current) attachmentInputRef.current.value = '';
+      }
     } catch (error) {
+      if (uploadedPath) {
+        try {
+          await supabase.storage.from('chat-media').remove([uploadedPath]);
+        } catch {
+          // Best effort cleanup of an attachment that could not be sent.
+        }
+      }
       showToast(error instanceof Error ? error.message : 'Could not send message.');
     } finally {
       setIsSending(false);
@@ -136,7 +182,10 @@ export const ChatModal: React.FC = () => {
               <h2 className="font-heading text-sm font-bold text-slate-900">Messages</h2>
               <button type="button" onClick={() => setIsChatModalOpen(false)} className="rounded-lg p-1 text-slate-500 hover:bg-white" aria-label="Close messages">×</button>
             </div>
-            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search connections" className="mt-3 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-blue-500" />
+            <div className="relative mt-3">
+              <span className="material-symbols-outlined pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-slate-400">search</span>
+              <input aria-label="Search connections" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search connections" className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20" />
+            </div>
           </div>
           <div className="flex-1 overflow-y-auto p-2">
             {filteredConnections.map((user) => (
@@ -159,7 +208,12 @@ export const ChatModal: React.FC = () => {
                 <button type="button" onClick={() => setIsChatModalOpen(false)} className="rounded-lg p-1 text-slate-500 hover:bg-slate-100" aria-label="Close messages">×</button>
               </header>
               <div className="flex-1 space-y-2 overflow-y-auto bg-slate-50 p-5">
-                {isLoading ? <p className="text-center text-xs text-slate-500">Loading messages…</p> : messages.length === 0 ? <p className="text-center text-xs text-slate-500">Start the conversation.</p> : messages.map((message) => (
+                {isLoading ? <p className="text-center text-xs text-slate-500">Loading messages…</p> : loadError ? (
+                  <div className="flex flex-col items-center gap-2 text-center text-xs text-slate-500">
+                    <p>{loadError}</p>
+                    <button type="button" onClick={() => setLoadAttempt((attempt) => attempt + 1)} className="font-semibold text-blue-600 hover:underline">Try again</button>
+                  </div>
+                ) : messages.length === 0 ? <p className="text-center text-xs text-slate-500">Start the conversation.</p> : messages.map((message) => (
                   <div key={message.id} className={`flex ${message.senderId === currentUser.id ? 'justify-end' : 'justify-start'}`}>
                     <div className={`max-w-[75%] rounded-2xl px-3 py-2 text-xs ${message.senderId === currentUser.id ? 'bg-blue-600 text-white' : 'bg-white text-slate-800 shadow-sm'}`}>
                       {message.body && <p className="whitespace-pre-wrap">{message.body}</p>}
@@ -202,11 +256,23 @@ export const ChatModal: React.FC = () => {
                     type="file"
                     accept="image/*,.pdf,.doc,.docx,.txt,.zip"
                     className="hidden"
-                    onChange={(event) => setAttachment(event.target.files?.[0] || null)}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (!file) return;
+                      if (file.size > MAX_ATTACHMENT_SIZE) {
+                        showToast('Attachments must be 10 MB or smaller.');
+                      } else if (!file.type.startsWith('image/') && !ACCEPTED_ATTACHMENT_EXTENSIONS.test(file.name)) {
+                        showToast('Accepted attachments: images, PDF, DOC, DOCX, TXT, or ZIP.');
+                      } else {
+                        setAttachment(file);
+                      }
+                      event.target.value = '';
+                    }}
                   />
-                  <textarea value={body} onChange={(event) => setBody(event.target.value)} rows={1} placeholder="Write a message…" className="max-h-28 min-h-10 flex-1 resize-y rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-blue-500" />
+                  <textarea aria-label="Message" value={body} onChange={(event) => setBody(event.target.value)} rows={1} placeholder="Write a message…" className="max-h-28 min-h-10 flex-1 resize-y rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-blue-500" />
                   <button type="submit" disabled={isSending || (!body.trim() && !attachment)} className="rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50">{isSending ? 'Sending…' : 'Send'}</button>
                 </div>
+                <p className="mt-1 pl-10 text-[10px] text-slate-500">Images, PDF, DOC, DOCX, TXT, or ZIP · maximum 10 MB.</p>
               </form>
             </>
           ) : <div className="flex flex-1 items-center justify-center text-sm text-slate-500">Select an accepted connection to message.</div>}
@@ -216,13 +282,18 @@ export const ChatModal: React.FC = () => {
   );
 };
 
-const messageRowToMessage = (row: Record<string, unknown>): ChatMessage => ({
-  id: String(row.id),
-  conversationId: String(row.conversation_id),
-  senderId: String(row.sender_id),
-  body: String(row.body || ''),
-  attachmentUrl: typeof row.attachment_url === 'string' ? row.attachment_url : undefined,
-  attachmentName: typeof row.attachment_name === 'string' ? row.attachment_name : undefined,
-  attachmentType: typeof row.attachment_type === 'string' ? row.attachment_type : undefined,
-  createdAt: String(row.created_at)
-});
+const messageRowToMessage = (row: unknown): ChatMessage | null => {
+  if (!row || typeof row !== 'object') return null;
+  const record = row as Record<string, unknown>;
+  if (typeof record.id !== 'string' || typeof record.conversation_id !== 'string' || typeof record.sender_id !== 'string' || typeof record.created_at !== 'string') return null;
+  return {
+    id: record.id,
+    conversationId: record.conversation_id,
+    senderId: record.sender_id,
+    body: typeof record.body === 'string' ? record.body : '',
+    attachmentUrl: typeof record.attachment_url === 'string' ? record.attachment_url : undefined,
+    attachmentName: typeof record.attachment_name === 'string' ? record.attachment_name : undefined,
+    attachmentType: typeof record.attachment_type === 'string' ? record.attachment_type : undefined,
+    createdAt: record.created_at
+  };
+};

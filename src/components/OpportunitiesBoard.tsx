@@ -68,15 +68,16 @@ export const OpportunitiesBoard: React.FC = () => {
       {/* Search & Type Filters */}
       <div className="space-y-2.5">
         <div className="relative w-full">
-          <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">
+          <span className="material-symbols-outlined pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">
             search
           </span>
           <input
+            aria-label="Search opportunities"
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by role, company, robotics lab, or skill required..."
-            className="w-full h-10 pl-10 pr-4 bg-white border border-slate-200 rounded-xl text-xs md:text-sm text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all shadow-2xs placeholder:text-slate-400"
+            className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 shadow-2xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
           />
         </div>
 

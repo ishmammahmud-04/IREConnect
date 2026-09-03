@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../context/AppContext';
 
 export const PeopleDirectory: React.FC = () => {
@@ -27,7 +27,7 @@ export const PeopleDirectory: React.FC = () => {
     return () => window.clearTimeout(timer);
   }, [searchQuery, searchDirectoryUsers]);
 
-  const filteredUsers = (directorySearchResults || users || []).filter((u) => {
+  const filteredUsers = useMemo(() => (directorySearchResults || users || []).filter((u) => {
     // Segment filter
     if (activeSegment === 'students' && u.role !== 'student') return false;
     if (activeSegment === 'alumni' && u.role !== 'alumni') return false;
@@ -62,8 +62,17 @@ export const PeopleDirectory: React.FC = () => {
     if (selectedSkillFilter !== 'All' && !userSkills.includes(selectedSkillFilter) && !userSpecs.includes(selectedSkillFilter)) return false;
 
     return true;
-  });
-  const batchOptions = Array.from(new Set((users || []).map((user) => user.batch).filter(Boolean))).sort();
+  }), [activeSegment, directorySearchResults, facultyStatusFilter, searchQuery, selectedBatchFilter, selectedGraduationYear, selectedRoleFilter, selectedSkillFilter, users]);
+  const { batchOptions, graduationYearOptions } = useMemo(() => {
+    const batches = new Set<string>();
+    const years = new Set<string>();
+    (users || []).forEach((user) => {
+      if (user.batch) batches.add(user.batch);
+      const year = String(user.graduationYear || user.batch || '');
+      if (year) years.add(year);
+    });
+    return { batchOptions: Array.from(batches).sort(), graduationYearOptions: Array.from(years).sort() };
+  }, [users]);
 
   return (
     <div className="space-y-4 animate-in fade-in duration-300">
@@ -80,15 +89,16 @@ export const PeopleDirectory: React.FC = () => {
       {/* Search & Segmented Controls */}
       <div className="space-y-2.5">
         <div className="relative w-full">
-          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">
+          <span className="material-symbols-outlined pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">
             search
           </span>
           <input
             type="text"
+            aria-label={`Search ${activeSegment} by name, skill, specialization, or company`}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={`Search ${activeSegment} by name, skill, specialization, company...`}
-            className="w-full h-9 pl-9 pr-3 bg-white border border-slate-200 rounded-lg text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all shadow-2xs"
+            className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 shadow-2xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
           />
         </div>
 
@@ -142,7 +152,7 @@ export const PeopleDirectory: React.FC = () => {
           </select>
           <select value={selectedGraduationYear} onChange={(event) => setSelectedGraduationYear(event.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">
             <option value="All">All years</option>
-            {Array.from(new Set((users || []).map((user) => String(user.graduationYear || user.batch || '')).filter(Boolean))).sort().map((year) => <option key={year} value={year}>{year}</option>)}
+            {graduationYearOptions.map((year) => <option key={year} value={year}>{year}</option>)}
           </select>
           {activeSegment === 'faculty' ? (
             <>

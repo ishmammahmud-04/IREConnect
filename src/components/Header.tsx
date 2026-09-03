@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useApp, MainTab } from '../context/AppContext';
 import { UserRole } from '../types';
 import { supabase } from '../lib/supabase';
@@ -19,7 +19,7 @@ export const Header: React.FC = () => {
   } = useApp();
 
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const unreadCount = useMemo(() => notifications.reduce((count, notification) => count + (notification.isRead ? 0 : 1), 0), [notifications]);
 
   return (
     <header className="sticky top-0 w-full z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs transition-all">
@@ -27,8 +27,9 @@ export const Header: React.FC = () => {
         {/* Brand & Logo */}
         <div className="flex items-center gap-3 shrink-0">
           <button
+            type="button"
             onClick={() => setCurrentTab('home')}
-            className="flex items-center gap-2.5 text-left group focus:outline-none"
+            className="flex items-center gap-2.5 text-left group focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 rounded-lg"
           >
             <div className="w-8 h-8 rounded-lg overflow-hidden bg-[#0F172A] flex items-center justify-center text-white border border-slate-800 shadow-xs group-hover:scale-105 transition-transform">
               <span className="material-symbols-outlined text-[18px] text-blue-400" style={{ fontVariationSettings: "'FILL' 1" }}>
@@ -51,11 +52,12 @@ export const Header: React.FC = () => {
         {/* Global Search Bar (Desktop) */}
         <div className="hidden md:flex flex-1 max-w-sm mx-2">
           <div className="relative w-full">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[16px]">
+            <span className="material-symbols-outlined pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">
               search
             </span>
             <input
               type="text"
+              aria-label="Search students, alumni, projects, and papers"
               value={globalSearchQuery}
               onChange={(e) => {
                 setGlobalSearchQuery(e.target.value);
@@ -64,12 +66,13 @@ export const Header: React.FC = () => {
                 }
               }}
               placeholder="Search students, alumni, projects, papers..."
-              className="w-full h-8 pl-8 pr-7 bg-slate-100/90 border border-slate-200 rounded-full text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-blue-600 focus:ring-1 focus:ring-blue-600 focus:outline-none transition-all"
+              className="h-10 w-full rounded-full border border-slate-200 bg-slate-100/90 pl-10 pr-10 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-all focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-600/20"
             />
             {globalSearchQuery && (
               <button
                 onClick={() => setGlobalSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+                className="absolute right-1 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                aria-label="Clear search"
               >
                 <span className="material-symbols-outlined text-[14px]">close</span>
               </button>
@@ -78,58 +81,68 @@ export const Header: React.FC = () => {
         </div>
 
         {/* Desktop Navigation Links */}
-        <nav className="hidden lg:flex items-center gap-1">
+        <nav className="hidden lg:flex items-center gap-1" aria-label="Primary navigation">
           <button
+            type="button"
             onClick={() => setCurrentTab('home')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
               currentTab === 'home'
                 ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
             }`}
+            aria-current={currentTab === 'home' ? 'page' : undefined}
           >
             <span className="material-symbols-outlined text-[16px]">home</span>
             Home
           </button>
           <button
+            type="button"
             onClick={() => setCurrentTab('discover')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
               currentTab === 'discover'
                 ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
             }`}
+            aria-current={currentTab === 'discover' ? 'page' : undefined}
           >
             <span className="material-symbols-outlined text-[16px]">explore</span>
             Discover
           </button>
           <button
+            type="button"
             onClick={() => setCurrentTab('network')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
               currentTab === 'network'
                 ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
             }`}
+            aria-current={currentTab === 'network' ? 'page' : undefined}
           >
             <span className="material-symbols-outlined text-[16px]">groups</span>
             Network
           </button>
           <button
+            type="button"
             onClick={() => setCurrentTab('opportunities')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
               currentTab === 'opportunities'
                 ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
             }`}
+            aria-current={currentTab === 'opportunities' ? 'page' : undefined}
           >
             <span className="material-symbols-outlined text-[16px]">work</span>
             Opportunities
           </button>
           <button
+            type="button"
             onClick={() => setCurrentTab('department')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
               currentTab === 'department'
                 ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
             }`}
+            aria-current={currentTab === 'department' ? 'page' : undefined}
           >
             <span className="material-symbols-outlined text-[16px]">account_balance</span>
             Department
@@ -140,6 +153,7 @@ export const Header: React.FC = () => {
         <div className="flex items-center gap-1.5 shrink-0">
           {/* + Create Button */}
           <button
+            type="button"
             onClick={() => setIsCreateModalOpen(true)}
             className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 active:scale-95 transition-all shadow-xs"
           >
@@ -149,9 +163,10 @@ export const Header: React.FC = () => {
 
           {/* Bookmarks */}
           <button
+            type="button"
             onClick={() => setIsSavedModalOpen(true)}
             aria-label="Saved Bookmarks"
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+            className="min-h-11 min-w-11 rounded-lg flex items-center justify-center text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
             title="Saved Items"
           >
             <span className="material-symbols-outlined text-[18px]">bookmark</span>
@@ -159,18 +174,20 @@ export const Header: React.FC = () => {
 
           {/* Notifications */}
           <button
+            type="button"
             onClick={() => setIsChatModalOpen(true)}
             aria-label="Messages"
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+            className="min-h-11 min-w-11 rounded-lg flex items-center justify-center text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
             title="Messages"
           >
             <span className="material-symbols-outlined text-[18px]">mail</span>
           </button>
 
           <button
+            type="button"
             onClick={() => setIsNotificationsModalOpen(true)}
             aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors relative"
+            className="min-h-11 min-w-11 rounded-lg flex items-center justify-center text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors relative"
             title="Notifications"
           >
             <span className="material-symbols-outlined text-[18px]">notifications</span>
@@ -184,7 +201,11 @@ export const Header: React.FC = () => {
           {/* Role Switcher & Profile Dropdown */}
           <div className="relative">
             <button
+              type="button"
               onClick={() => setIsRoleDropdownOpen(!isRoleDropdownOpen)}
+              aria-expanded={isRoleDropdownOpen}
+              aria-haspopup="menu"
+              aria-label={`Open account menu for ${currentUser.name}`}
               className="flex items-center gap-1.5 p-1 pl-1.5 pr-2 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 transition-all cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
               <div className="w-6 h-6 rounded-md overflow-hidden border border-slate-300 bg-slate-200 shrink-0">
@@ -220,6 +241,7 @@ export const Header: React.FC = () => {
 
                 <div className="border-t border-slate-100 mt-2 pt-1.5">
                   <button
+                    type="button"
                     onClick={() => setCurrentTab('profile')}
                     className="w-full text-left px-2.5 py-1.5 rounded-lg flex items-center gap-2 text-slate-700 hover:bg-slate-100"
                   >
@@ -227,6 +249,7 @@ export const Header: React.FC = () => {
                     <span>View Profile</span>
                   </button>
                   <button
+                    type="button"
                     onClick={() => setIsSettingsModalOpen(true)}
                     className="w-full text-left px-2.5 py-1.5 rounded-lg flex items-center gap-2 text-slate-700 hover:bg-slate-100"
                   >
@@ -234,6 +257,7 @@ export const Header: React.FC = () => {
                     <span>Settings &amp; Privacy</span>
                   </button>
                   <button
+                    type="button"
                     onClick={() => supabase.auth.signOut()}
                     className="w-full text-left px-2.5 py-1.5 rounded-lg flex items-center gap-2 text-red-600 hover:bg-red-50"
                   >

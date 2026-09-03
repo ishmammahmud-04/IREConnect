@@ -4,6 +4,14 @@ import { User } from '../types';
 import { FacultyProfileView } from './FacultyProfileView';
 import { ProfileCompletenessCard } from './ProfileCompletenessCard';
 
+const externalUrl = (value: string, defaultHost?: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  if (defaultHost) return `${defaultHost}${trimmed.replace(/^\/+/, '')}`;
+  return `https://${trimmed}`;
+};
+
 interface ProfileViewProps {
   userOverride?: User | null;
   onBack?: () => void;
@@ -471,7 +479,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
             <div className="space-y-1.5 text-xs">
               {canViewExternalLinks && user.externalLinks?.linkedin && (
                 <a
-                  href={`https://${user.externalLinks.linkedin}`}
+                  href={externalUrl(user.externalLinks.linkedin) || undefined}
                   target="_blank"
                   rel="noreferrer"
                   className="flex items-center justify-between p-2 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors text-slate-700"
@@ -484,7 +492,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
               )}
               {canViewExternalLinks && user.externalLinks?.github && (
                 <a
-                  href={`https://${user.externalLinks.github}`}
+                  href={externalUrl(user.externalLinks.github) || undefined}
                   target="_blank"
                   rel="noreferrer"
                   className="flex items-center justify-between p-2 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors text-slate-700"
@@ -497,7 +505,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
               )}
               {canViewExternalLinks && user.externalLinks?.googleScholar && (
                 <a
-                  href={`https://${user.externalLinks.googleScholar}`}
+                  href={externalUrl(user.externalLinks.googleScholar) || undefined}
                   target="_blank"
                   rel="noreferrer"
                   className="flex items-center justify-between p-2 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors text-slate-700"
@@ -510,7 +518,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
               )}
               {canViewExternalLinks && user.externalLinks?.orcid && (
                 <a
-                  href={`https://orcid.org/${user.externalLinks.orcid}`}
+                  href={externalUrl(user.externalLinks.orcid, 'https://orcid.org/') || undefined}
                   target="_blank"
                   rel="noreferrer"
                   className="flex items-center justify-between p-2 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors text-slate-700"

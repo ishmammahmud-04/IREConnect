@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import type { Announcement } from '../types';
 
 export const AdminControlSuite: React.FC = () => {
   const {
@@ -23,7 +24,7 @@ export const AdminControlSuite: React.FC = () => {
 
   const [adminTab, setAdminTab] = useState<'verification' | 'moderation' | 'broadcast' | 'analytics' | 'accounts'>('verification');
   const [broadcastTitle, setBroadcastTitle] = useState('');
-  const [broadcastCategory, setBroadcastCategory] = useState('General');
+  const [broadcastCategory, setBroadcastCategory] = useState<Announcement['category']>('General');
   const [broadcastDescription, setBroadcastDescription] = useState('');
   const [broadcastIsPinned, setBroadcastIsPinned] = useState(false);
   const [accountSearch, setAccountSearch] = useState('');
@@ -48,19 +49,28 @@ export const AdminControlSuite: React.FC = () => {
     return matchesSearch && matchesRole && matchesStatus;
   });
 
-  const handlePublishBroadcast = (e: React.FormEvent) => {
+  const handlePublishBroadcast = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!broadcastTitle || !broadcastDescription) return;
 
-    const postAnnouncement = publishAnnouncement || addAnnouncement;
-    if (postAnnouncement) {
-      postAnnouncement({
+    if (publishAnnouncement) {
+      const published = await publishAnnouncement({
         title: broadcastTitle,
-        category: broadcastCategory as any,
+        category: broadcastCategory,
         description: broadcastDescription,
         isPinned: broadcastIsPinned,
         author: currentUser.name
       });
+      if (!published) return;
+    } else if (addAnnouncement) {
+      const published = await addAnnouncement({
+        title: broadcastTitle,
+        category: broadcastCategory,
+        description: broadcastDescription,
+        isPinned: broadcastIsPinned,
+        author: currentUser.name
+      });
+      if (!published) return;
     }
 
     setBroadcastTitle('');
@@ -68,11 +78,11 @@ export const AdminControlSuite: React.FC = () => {
     setBroadcastIsPinned(false);
   };
 
-  const handleResolveReport = (reportId: string, action: 'dismiss' | 'remove') => {
+  const handleResolveReport = async (reportId: string, action: 'dismiss' | 'remove') => {
     if (resolveFlaggedItem) {
-      resolveFlaggedItem(reportId, action);
+      await resolveFlaggedItem(reportId, action);
     } else if (resolveModerationReport) {
-      resolveModerationReport(reportId, action === 'remove' ? 'remove' : 'approve');
+      await resolveModerationReport(reportId, action === 'remove' ? 'remove' : 'approve');
     }
   };
 
@@ -163,15 +173,15 @@ export const AdminControlSuite: React.FC = () => {
           </div>
 
           {pendingQueue.length > 0 ? (
-            pendingQueue.map((item: any) => {
-              const userName = item.userName || item.user?.name || 'User';
-              const userAvatar = item.avatar || item.user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=64748b&color=fff`;
-              const userEmail = item.email || item.user?.email || 'user@university.edu';
-              const requestedRole = item.requestedRole || item.user?.role || 'student';
-              const batch = item.batch || item.user?.batch || 'Not provided';
-              const submissionDate = item.submissionDate || item.submittedAt || 'Date unavailable';
-              const idOrProgram = item.studentIdOrEmployeeId || item.degreeProgram || 'Not provided';
-              const docUrl = item.documentUrl || item.evidenceDocUrl;
+            pendingQueue.map((item) => {
+              const userName = item.user.name || 'User';
+              const userAvatar = item.user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=64748b&color=fff`;
+              const userEmail = item.user.email || 'user@university.edu';
+              const requestedRole = item.user.role || 'student';
+              const batch = item.user.batch || 'Not provided';
+              const submissionDate = item.submittedAt || 'Date unavailable';
+              const idOrProgram = item.user.studentId || item.degreeProgram || 'Not provided';
+              const docUrl = item.evidenceDocUrl;
 
               return (
                 <div
@@ -247,10 +257,10 @@ export const AdminControlSuite: React.FC = () => {
       {adminTab === 'moderation' && (
         <div className="space-y-3">
           {activeReports.length > 0 ? (
-            activeReports.map((item: any) => {
-              const itemTitle = item.title || item.contentTitle || 'Untitled content';
-              const itemType = item.type || item.contentType || 'Content';
-              const timestamp = item.timestamp || item.date || 'Date unavailable';
+            activeReports.map((item) => {
+              const itemTitle = item.contentTitle || 'Untitled content';
+              const itemType = item.contentType || 'Content';
+              const timestamp = item.date || 'Date unavailable';
               const reason = item.reason || 'No reason provided';
               const reportedBy = item.reportedBy || 'Unknown member';
 
@@ -324,7 +334,7 @@ export const AdminControlSuite: React.FC = () => {
                 <label className="block text-xs font-bold text-slate-700 mb-1">Category</label>
                 <select
                   value={broadcastCategory}
-                  onChange={(e) => setBroadcastCategory(e.target.value)}
+                  onChange={(e) => setBroadcastCategory(e.target.value as Announcement['category'])}
                   className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-blue-600"
                 >
                   <option value="General">General Notice</option>

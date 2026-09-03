@@ -22,8 +22,10 @@ Deno.serve(async (request) => {
     if (userError || !user) return json({ error: 'Invalid session.' }, 401);
 
     const adminClient = createClient(supabaseUrl, serviceKey);
-    const body = await request.json() as { action: Action; workflowId?: string; title?: string; description?: string; category?: string; isPinned?: string; targetUserId?: string };
-    if (!body.action) return json({ error: 'Action is required.' }, 400);
+    const body = await request.json() as { action: Action; workflowId?: string; title?: string; description?: string; category?: string; isPinned?: boolean | string; targetUserId?: string };
+    if (!body.action || !['verify_user', 'reject_verification', 'remove_content', 'dismiss_report', 'publish_announcement', 'delete_account'].includes(body.action)) {
+      return json({ error: 'A valid action is required.' }, 400);
+    }
 
     if (body.action === 'delete_account') {
       const targetUserId = body.targetUserId || user.id;
@@ -35,6 +37,12 @@ Deno.serve(async (request) => {
           .eq('status', 'active')
           .maybeSingle();
         if (adminError || !adminUser) return json({ error: 'Administrator access required.' }, 403);
+      }
+      if (targetUserId !== user.id) {
+        const { error: auditError } = await adminClient.from('admin_audit_logs').insert({
+          admin_id: user.id, action: 'DELETED_ACCOUNT', target_type: 'user', target_id: targetUserId, metadata: {}
+        });
+        if (auditError) return json({ error: auditError.message }, 500);
       }
       const { error } = await adminClient.auth.admin.deleteUser(targetUserId);
       if (error) return json({ error: error.message }, 400);
@@ -51,16 +59,18 @@ Deno.serve(async (request) => {
 
     if (body.action === 'publish_announcement') {
       if (!body.title?.trim() || !body.description?.trim()) return json({ error: 'Title and description are required.' }, 400);
-      const announcement = { id: crypto.randomUUID(), title: body.title.trim(), description: body.description.trim(), category: body.category || 'General', isPinned: body.isPinned === 'true', author: 'IRE Admin Desk', date: 'Just now' };
+      const isPinned = body.isPinned === true || body.isPinned === 'true';
+      const announcement = { id: crypto.randomUUID(), title: body.title.trim(), description: body.description.trim(), category: body.category || 'General', isPinned, author: 'IRE Admin Desk', date: 'Just now' };
       const { error } = await adminClient.from('content_items').insert({ id: announcement.id, owner_id: user.id, content_type: 'announcement', data: announcement });
       if (error) return json({ error: error.message }, 400);
-      await adminClient.from('admin_audit_logs').insert({
+      const { error: auditError } = await adminClient.from('admin_audit_logs').insert({
         admin_id: user.id,
         action: 'PUBLISHED_ANNOUNCEMENT',
         target_type: 'announcement',
         target_id: announcement.id,
         metadata: { title: announcement.title }
       });
+      if (auditError) return json({ error: auditError.message }, 500);
       return json({ ok: true, announcement });
     }
 
@@ -72,16 +82,20 @@ Deno.serve(async (request) => {
       if (workflow.workflow_type !== 'verification_request') return json({ error: 'Invalid verification workflow.' }, 400);
       const status = body.action === 'verify_user' ? 'verified' : 'rejected';
       const verificationStatus = body.action === 'verify_user' ? 'Verified Student' : 'Rejected';
-      await adminClient.from('workflow_items').update({ status, updated_at: new Date().toISOString() }).eq('id', body.workflowId);
-      await adminClient.from('profiles').update({ verification_status: verificationStatus, updated_at: new Date().toISOString() }).eq('user_id', workflow.requester_id);
-      await adminClient.from('notifications').insert({ user_id: workflow.requester_id, title: body.action === 'verify_user' ? 'Identity verified' : 'Verification update', message: body.action === 'verify_user' ? 'Your account has been verified.' : 'Your verification request was rejected.', notification_type: 'verification' });
-      await adminClient.from('admin_audit_logs').insert({
+      const { error: workflowUpdateError } = await adminClient.from('workflow_items').update({ status, updated_at: new Date().toISOString() }).eq('id', body.workflowId);
+      if (workflowUpdateError) return json({ error: workflowUpdateError.message }, 500);
+      const { error: profileError } = await adminClient.from('profiles').update({ verification_status: verificationStatus, updated_at: new Date().toISOString() }).eq('user_id', workflow.requester_id);
+      if (profileError) return json({ error: profileError.message }, 500);
+      const { error: notificationError } = await adminClient.from('notifications').insert({ user_id: workflow.requester_id, title: body.action === 'verify_user' ? 'Identity verified' : 'Verification update', message: body.action === 'verify_user' ? 'Your account has been verified.' : 'Your verification request was rejected.', notification_type: 'verification' });
+      if (notificationError) return json({ error: notificationError.message }, 500);
+      const { error: auditError } = await adminClient.from('admin_audit_logs').insert({
         admin_id: user.id,
         action: body.action === 'verify_user' ? 'APPROVED_USER' : 'REJECTED_USER',
         target_type: 'user',
         target_id: workflow.requester_id,
         metadata: { workflowId: body.workflowId }
       });
+      if (auditError) return json({ error: auditError.message }, 500);
       return json({ ok: true });
     }
 
@@ -89,7 +103,9 @@ Deno.serve(async (request) => {
     if (body.action === 'remove_content') {
       const contentId = typeof workflow.data?.contentId === 'string' ? workflow.data.contentId : null;
       if (contentId) {
-        const { data: content } = await adminClient.from('content_items').select('data').eq('id', contentId).maybeSingle();
+        const { data: content, error: contentError } = await adminClient.from('content_items').select('data').eq('id', contentId).maybeSingle();
+        if (contentError) return json({ error: contentError.message }, 500);
+        if (!content) return json({ error: 'Reported content was not found.' }, 404);
         if (content) {
           const data = {
             ...(content.data as Record<string, unknown>),
@@ -97,20 +113,29 @@ Deno.serve(async (request) => {
             removedAt: new Date().toISOString(),
             removedBy: user.id
           };
-          await adminClient.from('content_items').update({ data, updated_at: new Date().toISOString() }).eq('id', contentId);
+        const { error: contentUpdateError } = await adminClient.from('content_items').update({ data, updated_at: new Date().toISOString() }).eq('id', contentId);
+        if (contentUpdateError) return json({ error: contentUpdateError.message }, 500);
         }
-      }
+      } else return json({ error: 'Reported content identifier is missing.' }, 400);
     }
     const status = body.action === 'remove_content' ? 'dismissed' : 'resolved';
     const { error } = await adminClient.from('workflow_items').update({ status, updated_at: new Date().toISOString() }).eq('id', body.workflowId);
     if (error) return json({ error: error.message }, 400);
-    await adminClient.from('admin_audit_logs').insert({
+    const { error: auditError } = await adminClient.from('admin_audit_logs').insert({
       admin_id: user.id,
       action: body.action === 'remove_content' ? 'REMOVED_POST' : 'RESOLVED_REPORT',
       target_type: 'moderation_report',
       target_id: body.workflowId,
       metadata: { action: body.action }
     });
+    if (auditError) return json({ error: auditError.message }, 500);
+    const { error: notificationError } = await adminClient.from('notifications').insert({
+      user_id: workflow.requester_id,
+      title: body.action === 'remove_content' ? 'Report resolved' : 'Report dismissed',
+      message: body.action === 'remove_content' ? 'The content you reported was removed.' : 'The content report was reviewed and dismissed.',
+      notification_type: 'content_interaction'
+    });
+    if (notificationError) return json({ error: notificationError.message }, 500);
     return json({ ok: true });
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : 'Unexpected server error.' }, 500);

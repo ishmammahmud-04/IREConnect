@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Announcement, DepartmentEvent } from '../types';
+
+const announcementCategories: Announcement['category'][] = ['Exam Notice', 'Workshop', 'Competition', 'Equipment', 'General', 'Announcement'];
 
 export const DepartmentHub: React.FC = () => {
   const {
@@ -42,12 +44,12 @@ export const DepartmentHub: React.FC = () => {
 
   const categories = ['All', 'Exam Notice', 'Workshop', 'Equipment', 'General'];
 
-  const filteredAnnouncements = (announcements || []).filter((ann) => {
+  const filteredAnnouncements = useMemo(() => (announcements || []).filter((ann) => {
     if (selectedAnnouncementCategory !== 'All' && ann.category !== selectedAnnouncementCategory) return false;
     return true;
-  });
+  }), [announcements, selectedAnnouncementCategory]);
 
-  const formerFaculty = (users || []).filter((u) => u.role === 'former_faculty');
+  const formerFaculty = useMemo(() => (users || []).filter((u) => u.role === 'former_faculty'), [users]);
   const canManageDepartment = isAdmin;
 
   const resetForm = () => {
@@ -74,7 +76,7 @@ export const DepartmentHub: React.FC = () => {
         resetForm();
         return;
       }
-      await createAnnouncement({ title: formTitle.trim(), description: formDescription.trim(), category: formCategory as any, author: currentUser.name, date: 'Just now' });
+      await createAnnouncement({ title: formTitle.trim(), description: formDescription.trim(), category: announcementCategories.includes(formCategory as Announcement['category']) ? formCategory as Announcement['category'] : 'General', author: currentUser.name, date: 'Just now' });
     } else if (activeTab === 'events') {
       if (editingEvent) {
         await updatePublishedContent('event', { ...editingEvent, title: formTitle.trim(), description: formDescription.trim(), date: formDate || 'TBA', time: formTime || 'TBA', location: formLocation || 'TBA', category: formCategory });
@@ -129,8 +131,8 @@ export const DepartmentHub: React.FC = () => {
 
       {isAdding && ((activeTab === 'announcements' || activeTab === 'events') || canManageDepartment) && (
         <form onSubmit={submitDepartmentItem} className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
-          <input required value={formTitle} onChange={(event) => setFormTitle(event.target.value)} placeholder={activeTab === 'history' ? 'Milestone title' : activeTab === 'events' ? 'Event or workshop title' : 'Announcement title'} className="h-9 w-full rounded-lg border border-slate-200 px-3 text-xs outline-none focus:border-blue-600" />
-          <textarea required rows={3} value={formDescription} onChange={(event) => setFormDescription(event.target.value)} placeholder="Description" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs outline-none focus:border-blue-600" />
+          <input aria-label={activeTab === 'history' ? 'Milestone title' : activeTab === 'events' ? 'Event or workshop title' : 'Announcement title'} required value={formTitle} onChange={(event) => setFormTitle(event.target.value)} placeholder={activeTab === 'history' ? 'Milestone title' : activeTab === 'events' ? 'Event or workshop title' : 'Announcement title'} className="h-9 w-full rounded-lg border border-slate-200 px-3 text-xs outline-none focus:border-blue-600" />
+          <textarea aria-label="Description" required rows={3} value={formDescription} onChange={(event) => setFormDescription(event.target.value)} placeholder="Description" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs outline-none focus:border-blue-600" />
           {activeTab === 'history' && <input required value={formDate} onChange={(event) => setFormDate(event.target.value)} placeholder="Year" className="rounded-lg border border-slate-200 px-3 py-2 text-xs" />}
           {activeTab === 'events' && <div className="grid grid-cols-1 gap-2 sm:grid-cols-3"><input value={formDate} onChange={(event) => setFormDate(event.target.value)} placeholder="Date, e.g. 18 Sep" className="rounded-lg border border-slate-200 px-3 py-2 text-xs" /><input value={formTime} onChange={(event) => setFormTime(event.target.value)} placeholder="Time" className="rounded-lg border border-slate-200 px-3 py-2 text-xs" /><input value={formLocation} onChange={(event) => setFormLocation(event.target.value)} placeholder="Location" className="rounded-lg border border-slate-200 px-3 py-2 text-xs" /></div>}
           {(activeTab === 'announcements' || activeTab === 'events') && <select value={formCategory} onChange={(event) => setFormCategory(event.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-xs"><option>Workshop</option><option>General</option><option>Exam Notice</option><option>Equipment</option><option>Competition</option></select>}
@@ -261,6 +263,13 @@ export const DepartmentHub: React.FC = () => {
                 )}
               </div>
             ))}
+            {filteredAnnouncements.length === 0 && (
+              <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-2xs">
+                <span className="material-symbols-outlined text-[32px] text-slate-400">campaign</span>
+                <h3 className="font-heading text-sm font-bold text-slate-900">No announcements found</h3>
+                <p className="text-xs text-slate-500">There are no announcements in this category yet.</p>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -330,6 +339,13 @@ export const DepartmentHub: React.FC = () => {
               </div>
             </div>
           ))}
+          {events.length === 0 && (
+            <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-2xs">
+              <span className="material-symbols-outlined text-[32px] text-slate-400">event_busy</span>
+              <h3 className="font-heading text-sm font-bold text-slate-900">No upcoming events</h3>
+              <p className="text-xs text-slate-500">Check back soon for department workshops and events.</p>
+            </div>
+          )}
         </div>
       )}
 

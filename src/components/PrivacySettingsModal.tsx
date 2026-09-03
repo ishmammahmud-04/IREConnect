@@ -47,6 +47,7 @@ export const PrivacySettingsModal: React.FC = () => {
   const cameraStreamRef = useRef<MediaStream | null>(null);
   const [cameraType, setCameraType] = useState<'avatar' | 'banner' | null>(null);
   const [pendingCropImage, setPendingCropImage] = useState<{ file: File; type: 'avatar' | 'banner' } | null>(null);
+  const [selectedCVFileName, setSelectedCVFileName] = useState('');
 
   const queueProfileImage = (file: File, type: 'avatar' | 'banner') => {
     setPendingCropImage({ file, type });
@@ -54,13 +55,29 @@ export const PrivacySettingsModal: React.FC = () => {
 
   const handleImageSelected = async (event: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'banner') => {
     const file = event.target.files?.[0];
-    if (file) queueProfileImage(file, type);
+    if (file) {
+      const isAllowedPhoto = ['image/jpeg', 'image/png', 'image/webp', 'image/bmp'].includes(file.type)
+        || /\.(jpe?g|png|webp|bmp)$/i.test(file.name);
+      if (!isAllowedPhoto || file.size > 5 * 1024 * 1024) {
+        showToast('Use a JPG, PNG, WEBP, or BMP image no larger than 5 MB.');
+      } else {
+        queueProfileImage(file, type);
+      }
+    }
     event.target.value = '';
   };
 
   const handleCVSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) await updateProfileCV(file);
+    if (file) {
+      const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+      if (!isPdf || file.size > 10 * 1024 * 1024) {
+        showToast('Choose a PDF file no larger than 10 MB.');
+      } else {
+        setSelectedCVFileName(file.name);
+        await updateProfileCV(file);
+      }
+    }
     event.target.value = '';
   };
 
@@ -190,12 +207,12 @@ export const PrivacySettingsModal: React.FC = () => {
         />
       )}
       <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex justify-center items-center p-4 overflow-y-auto animate-in fade-in duration-200">
-        <div className="bg-white w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-xl border border-slate-200 shadow-2xl my-4 relative animate-in zoom-in-95 duration-200">
+        <div className="bg-white w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-xl border border-slate-200 shadow-2xl my-4 relative animate-in zoom-in-95 duration-200" role="dialog" aria-modal="true" aria-labelledby="privacy-settings-title">
         {/* Header */}
         <div className="sticky top-0 z-10 px-5 py-3 border-b border-slate-200 bg-white flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <span className="material-symbols-outlined text-blue-600 text-[18px]">lock</span>
-            <h2 className="font-heading text-sm font-bold text-slate-900">
+            <h2 id="privacy-settings-title" className="font-heading text-sm font-bold text-slate-900">
               Privacy &amp; Notification Settings
             </h2>
           </div>
@@ -231,7 +248,7 @@ export const PrivacySettingsModal: React.FC = () => {
             </div>
             <input ref={avatarInputRef} type="file" accept=".jpg,.jpeg,.png,.webp,.bmp,image/jpeg,image/png,image/webp,image/bmp" className="hidden" onChange={(event) => void handleImageSelected(event, 'avatar')} />
             <input ref={bannerInputRef} type="file" accept=".jpg,.jpeg,.png,.webp,.bmp,image/jpeg,image/png,image/webp,image/bmp" className="hidden" onChange={(event) => void handleImageSelected(event, 'banner')} />
-            <p className="text-[10px] text-slate-500">{isUploadingProfileImage ? 'Uploading image...' : 'Accepted formats: JPG, JPEG, PNG, WEBP, and BMP. GIFs and videos are not supported.'}</p>
+            <p className="text-[10px] text-slate-500">{isUploadingProfileImage ? 'Uploading image...' : 'Accepted formats: JPG, JPEG, PNG, WEBP, and BMP. Maximum size: 5 MB. Select a photo to replace the current one; cancel crop to remove the selection.'}</p>
           </div>
 
           {cameraType && (
@@ -273,6 +290,7 @@ export const PrivacySettingsModal: React.FC = () => {
                     onClick={() => {
                       if (window.confirm('Delete your uploaded CV? This cannot be undone.')) {
                         void deleteProfileCV();
+                        setSelectedCVFileName('');
                       }
                     }}
                     className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-100 disabled:opacity-60"
@@ -283,7 +301,8 @@ export const PrivacySettingsModal: React.FC = () => {
               )}
             </div>
             <input ref={cvInputRef} type="file" accept=".pdf,application/pdf" className="hidden" onChange={(event) => void handleCVSelected(event)} />
-            <p className="text-[10px] text-slate-500">{isUploadingCV ? 'Uploading PDF CV...' : 'Only PDF files are accepted. Maximum size: 10 MB.'}</p>
+            {selectedCVFileName && <p className="truncate text-[10px] font-semibold text-slate-600" title={selectedCVFileName}>Selected: {selectedCVFileName}</p>}
+            <p className="text-[10px] text-slate-500">{isUploadingCV ? 'Uploading PDF CV...' : 'Only PDF files are accepted. Maximum size: 10 MB. Uploading replaces the current CV.'}</p>
           </div>
           <div className="space-y-2 border-b border-slate-100 pb-3.5">
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 font-mono">Profile details</p>

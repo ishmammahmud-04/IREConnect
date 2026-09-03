@@ -72,14 +72,17 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({ file, mode, onCl
   };
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/75 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/75 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="crop-photo-title">
       <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Crop photo</p>
-            <h3 className="font-heading text-base font-bold text-slate-900">
+            <h3 id="crop-photo-title" className="font-heading text-base font-bold text-slate-900">
               {mode === 'avatar' ? 'Profile photo' : mode === 'banner' ? 'Profile banner' : 'Cover image'}
             </h3>
+            <p className="mt-1 max-w-[28rem] truncate text-[10px] text-slate-500" title={file.name}>
+              {file.name} · JPG, JPEG, PNG, WEBP, or BMP · max 5 MB
+            </p>
           </div>
           <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-bold text-slate-600 hover:bg-slate-100">Close</button>
         </div>
@@ -116,6 +119,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({ file, mode, onCl
             </div>
             <input
               type="range"
+              aria-label="Zoom crop preview"
               min={1}
               max={2.5}
               step={0.01}

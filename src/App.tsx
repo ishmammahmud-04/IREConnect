@@ -27,11 +27,35 @@ import { ChatModal } from './components/ChatModal';
 import { AuthScreen } from './components/AuthScreen';
 import { AdminControlSuite } from './components/AdminControlSuite';
 import { supabase } from './lib/supabase';
-import { AppNotification, User } from './types';
+import { Achievement, Announcement, AppNotification, Article, DepartmentEvent, Opportunity, Project, Publication, User, WorkflowItem } from './types';
 
-const getRouteState = (pathname: string) => {
-  const normalizedPath = pathname.split('?')[0].replace(/\/+$/, '') || '/';
-  const tabRoutes: Record<string, string> = {
+type RouteState = {
+  tab: 'home' | 'discover' | 'network' | 'opportunities' | 'department' | 'profile' | 'admin';
+  userId: string | null;
+  projectId: string | null;
+  publicationId: string | null;
+  achievementId: string | null;
+  articleId: string | null;
+  opportunityId: string | null;
+};
+
+const emptyRouteState = (tab: RouteState['tab']): RouteState => ({
+  tab, userId: null, projectId: null, publicationId: null, achievementId: null, articleId: null, opportunityId: null
+});
+
+const getRouteId = (path: string, prefix: string) => {
+  const value = path.slice(prefix.length);
+  if (!value || value.includes('/')) return null;
+  try {
+    return decodeURIComponent(value) || null;
+  } catch {
+    return null;
+  }
+};
+
+const getRouteState = (pathname: string): RouteState => {
+  const normalizedPath = pathname.split(/[?#]/, 1)[0].replace(/\/+$/, '') || '/';
+  const tabRoutes: Record<string, RouteState['tab']> = {
    '/': 'home',
    '/discover': 'discover',
    '/network': 'network',
@@ -43,30 +67,30 @@ const getRouteState = (pathname: string) => {
   };
 
   if (normalizedPath.startsWith('/profile/')) {
-   return { tab: 'profile', userId: normalizedPath.slice('/profile/'.length) || null, projectId: null, publicationId: null, achievementId: null, articleId: null, opportunityId: null };
+   return { ...emptyRouteState('profile'), userId: getRouteId(normalizedPath, '/profile/') };
   }
 
   if (normalizedPath.startsWith('/projects/')) {
-   return { tab: 'discover', userId: null, projectId: normalizedPath.slice('/projects/'.length) || null, publicationId: null, achievementId: null, articleId: null, opportunityId: null };
+   return { ...emptyRouteState('discover'), projectId: getRouteId(normalizedPath, '/projects/') };
   }
 
   if (normalizedPath.startsWith('/publications/')) {
-   return { tab: 'discover', userId: null, projectId: null, publicationId: normalizedPath.slice('/publications/'.length) || null, achievementId: null, articleId: null, opportunityId: null };
+   return { ...emptyRouteState('discover'), publicationId: getRouteId(normalizedPath, '/publications/') };
   }
 
   if (normalizedPath.startsWith('/achievements/')) {
-   return { tab: 'profile', userId: null, projectId: null, publicationId: null, achievementId: normalizedPath.slice('/achievements/'.length) || null, articleId: null, opportunityId: null };
+   return { ...emptyRouteState('profile'), achievementId: getRouteId(normalizedPath, '/achievements/') };
   }
 
   if (normalizedPath.startsWith('/articles/')) {
-   return { tab: 'discover', userId: null, projectId: null, publicationId: null, achievementId: null, articleId: normalizedPath.slice('/articles/'.length) || null, opportunityId: null };
+   return { ...emptyRouteState('discover'), articleId: getRouteId(normalizedPath, '/articles/') };
   }
 
   if (normalizedPath.startsWith('/opportunities/')) {
-   return { tab: 'opportunities', userId: null, projectId: null, publicationId: null, achievementId: null, articleId: null, opportunityId: normalizedPath.slice('/opportunities/'.length) || null };
+   return { ...emptyRouteState('opportunities'), opportunityId: getRouteId(normalizedPath, '/opportunities/') };
   }
 
-  return { tab: tabRoutes[normalizedPath] || 'home', userId: null, projectId: null, publicationId: null, achievementId: null, articleId: null, opportunityId: null };
+  return emptyRouteState(tabRoutes[normalizedPath] || 'home');
 };
 
 const MainContent: React.FC = () => {
@@ -145,8 +169,16 @@ const MainContent: React.FC = () => {
   useEffect(() => {
     if (routeGuardRef.current) return;
 
+    if (currentTab === 'admin' && !isAdmin) {
+      routeGuardRef.current = true;
+      window.history.replaceState({}, '', '/');
+      routeGuardRef.current = false;
+      syncCurrentTabFromPath('/');
+      return;
+    }
+
     if (selectedUserForProfile) {
-      const nextPath = `/profile/${selectedUserForProfile.id}`;
+      const nextPath = `/profile/${encodeURIComponent(selectedUserForProfile.id)}`;
       const isAlreadyOnTarget = window.location.pathname === nextPath || window.location.pathname.startsWith(`${nextPath}/`);
       if (!isAlreadyOnTarget && !window.location.pathname.startsWith('/profile/')) {
         routeGuardRef.current = true;
@@ -157,7 +189,7 @@ const MainContent: React.FC = () => {
     }
 
     if (selectedProject) {
-      const nextPath = `/projects/${selectedProject.id}`;
+      const nextPath = `/projects/${encodeURIComponent(selectedProject.id)}`;
       if (window.location.pathname !== nextPath) {
         routeGuardRef.current = true;
         window.history.replaceState({ projectId: selectedProject.id }, '', nextPath);
@@ -167,7 +199,7 @@ const MainContent: React.FC = () => {
     }
 
     if (selectedPublication) {
-      const nextPath = `/publications/${selectedPublication.id}`;
+      const nextPath = `/publications/${encodeURIComponent(selectedPublication.id)}`;
       if (window.location.pathname !== nextPath) {
         routeGuardRef.current = true;
         window.history.replaceState({ publicationId: selectedPublication.id }, '', nextPath);
@@ -177,7 +209,7 @@ const MainContent: React.FC = () => {
     }
 
     if (selectedAchievement) {
-      const nextPath = `/achievements/${selectedAchievement.id}`;
+      const nextPath = `/achievements/${encodeURIComponent(selectedAchievement.id)}`;
       if (window.location.pathname !== nextPath) {
         routeGuardRef.current = true;
         window.history.replaceState({ achievementId: selectedAchievement.id }, '', nextPath);
@@ -187,7 +219,7 @@ const MainContent: React.FC = () => {
     }
 
     if (selectedOpportunity) {
-      const nextPath = `/opportunities/${selectedOpportunity.id}`;
+      const nextPath = `/opportunities/${encodeURIComponent(selectedOpportunity.id)}`;
       if (window.location.pathname !== nextPath) {
         routeGuardRef.current = true;
         window.history.replaceState({ opportunityId: selectedOpportunity.id }, '', nextPath);
@@ -197,7 +229,7 @@ const MainContent: React.FC = () => {
     }
 
     if (selectedArticle) {
-      const nextPath = `/articles/${selectedArticle.id}`;
+      const nextPath = `/articles/${encodeURIComponent(selectedArticle.id)}`;
       if (window.location.pathname !== nextPath) {
         routeGuardRef.current = true;
         window.history.replaceState({ articleId: selectedArticle.id }, '', nextPath);
@@ -216,7 +248,7 @@ const MainContent: React.FC = () => {
         routeGuardRef.current = false;
       }
     }
-  }, [selectedUserForProfile, selectedProject, selectedPublication, selectedAchievement, selectedOpportunity, selectedArticle, currentTab]);
+  }, [selectedUserForProfile, selectedProject, selectedPublication, selectedAchievement, selectedOpportunity, selectedArticle, currentTab, isAdmin, syncCurrentTabFromPath]);
 
   const renderActiveScreen = () => {
     const tabFallbackMap: Record<typeof lastNonProfileTab, string> = {
@@ -321,10 +353,18 @@ const AuthGate: React.FC = () => {
   const { setCurrentUser, hydratePersistedAccount, hydratePersistedContent, hydrateDirectory, hydrateWorkflows, hydrateNotifications } = useApp();
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDataLoading, setIsDataLoading] = useState(false);
+  const [dataLoadError, setDataLoadError] = useState<string | null>(null);
+  const [dataLoadAttempt, setDataLoadAttempt] = useState(0);
 
   useEffect(() => {
     supabase.auth.getSession()
-      .then(({ data: { session } }) => {
+      .then(({ data: { session }, error }) => {
+        if (error) {
+          setSession(null);
+          setIsLoading(false);
+          return;
+        }
         setSession(session);
         setIsLoading(false);
       })
@@ -341,7 +381,20 @@ const AuthGate: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!session?.user) return;
+    if (!session?.user) {
+      setIsDataLoading(false);
+      setDataLoadError(null);
+      return;
+    }
+    let active = true;
+    setIsDataLoading(true);
+    setDataLoadError(null);
+    if (!session.user.email_confirmed_at || !session.user.email || !/^[^\s@]+@uftb\.ac\.bd$/i.test(session.user.email)) {
+      setIsDataLoading(false);
+      setSession(null);
+      void supabase.auth.signOut();
+      return;
+    }
     const fallbackUser = toAppUser(session.user);
     setCurrentUser(fallbackUser);
     void Promise.all([
@@ -354,7 +407,8 @@ const AuthGate: React.FC = () => {
       supabase.from('workflow_items').select('*').order('created_at', { ascending: false }),
       supabase.from('admin_users').select('user_id').eq('user_id', session.user.id).eq('status', 'active').maybeSingle()
     ]).then(([profileResult, notificationResult, savedItemResult, contentResult, milestoneResult, directoryResult, workflowResult, adminResult]) => {
-      if (profileResult.error) return;
+      if (!active) return;
+      if (profileResult.error) throw profileResult.error;
       const hasAdminAccess = !adminResult.error && Boolean(adminResult.data);
       const loadedUser = profileResult.data ? profileRowToUser(profileResult.data, fallbackUser, hasAdminAccess) : fallbackUser;
       hydratePersistedAccount({
@@ -365,29 +419,56 @@ const AuthGate: React.FC = () => {
       });
       if (!contentResult.error) hydratePersistedContent({ ...contentRowsToAppData(contentResult.data), milestones: milestoneResult.error ? [] : milestoneResult.data });
       if (!directoryResult.error) hydrateDirectory(directoryResult.data.map(profileRowToDirectoryUser));
-      if (!workflowResult.error) hydrateWorkflows(workflowResult.data as any[]);
+      if (!workflowResult.error) hydrateWorkflows(workflowResult.data as WorkflowItem[]);
+    }).catch((error: unknown) => {
+      if (active) setDataLoadError(error instanceof Error ? error.message : 'Could not load your IREConnect data.');
+    }).finally(() => {
+      if (active) setIsDataLoading(false);
     });
-  }, [session]);
+    return () => {
+      active = false;
+    };
+  }, [session, dataLoadAttempt]);
 
   useEffect(() => {
     if (!session?.user) return;
     const workflowChannel = supabase
       .channel(`workflow-updates-${session.user.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'workflow_items' }, async () => {
-        const { data } = await supabase.from('workflow_items').select('*').order('created_at', { ascending: false });
-        if (data) hydrateWorkflows(data as any[]);
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'workflow_items' }, () => {
+        void (async () => {
+          try {
+            const { data } = await supabase.from('workflow_items').select('*').order('created_at', { ascending: false });
+            if (data) hydrateWorkflows(data as WorkflowItem[]);
+          } catch {
+            // The next realtime event will retry the refresh.
+          }
+        })();
       })
       .subscribe();
     const notificationChannel = supabase
       .channel(`notification-updates-${session.user.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${session.user.id}` }, async () => {
-        const { data } = await supabase.from('notifications').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false });
-        if (data) hydrateNotifications(data.map(notificationRowToAppNotification));
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${session.user.id}` }, () => {
+        void (async () => {
+          try {
+            const { data } = await supabase.from('notifications').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false });
+            if (data) hydrateNotifications(data.map(notificationRowToAppNotification));
+          } catch {
+            // The next realtime event will retry the refresh.
+          }
+        })();
       })
       .subscribe();
     return () => {
-      void supabase.removeChannel(workflowChannel);
-      void supabase.removeChannel(notificationChannel);
+      void (async () => {
+        try {
+          await Promise.all([
+            supabase.removeChannel(workflowChannel),
+            supabase.removeChannel(notificationChannel)
+          ]);
+        } catch {
+          // Channel cleanup is best effort.
+        }
+      })();
     };
   }, [session, hydrateNotifications, hydrateWorkflows]);
 
@@ -395,7 +476,17 @@ const AuthGate: React.FC = () => {
   const isPasswordRecovery = new URLSearchParams(window.location.search).get('type') === 'recovery'
     || new URLSearchParams(window.location.hash.replace(/^#/, '')).get('type') === 'recovery';
   const isAdminRoute = window.location.pathname === '/admindashboard' || window.location.pathname === '/admin';
-  if (!session || isPasswordRecovery) return <AuthScreen adminOnly={isAdminRoute} />;
+  const isEmailConfirmed = Boolean(session?.user.email_confirmed_at);
+  const isUftbAccount = Boolean(session?.user.email && /^[^\s@]+@uftb\.ac\.bd$/i.test(session.user.email));
+  if (!session || !isEmailConfirmed || !isUftbAccount || isPasswordRecovery) return <AuthScreen adminOnly={isAdminRoute} />;
+  if (isDataLoading) return <main role="status" className="flex min-h-screen items-center justify-center bg-slate-100 text-sm font-semibold text-slate-600">Loading your IREConnect data…</main>;
+  if (dataLoadError) return (
+    <main role="alert" className="flex min-h-screen flex-col items-center justify-center gap-3 bg-slate-100 px-6 text-center">
+      <p className="text-sm font-semibold text-slate-700">We couldn’t load your IREConnect data.</p>
+      <p className="max-w-md text-xs text-slate-500">{dataLoadError}</p>
+      <button type="button" onClick={() => setDataLoadAttempt((attempt) => attempt + 1)} className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700">Try again</button>
+    </main>
+  );
   return <MainContent />;
 };
 
@@ -470,17 +561,17 @@ return next as T;
 };
 
 const contentRowsToAppData = (rows: Array<{ content_type: string; data: unknown; owner_id?: string | null }>) => {
-const result = { projects: [] as User extends never ? never[] : any[], achievements: [] as any[], publications: [] as any[], articles: [] as any[], opportunities: [] as any[], announcements: [] as any[], events: [] as any[] };
+const result: { projects: Project[]; achievements: Achievement[]; publications: Publication[]; articles: Article[]; opportunities: Opportunity[]; announcements: Announcement[]; events: DepartmentEvent[] } = { projects: [], achievements: [], publications: [], articles: [], opportunities: [], announcements: [], events: [] };
 for (const row of rows) {
-  if (!row.data || typeof row.data !== 'object') continue;
+  if (!row.data || typeof row.data !== 'object' || Array.isArray(row.data) || typeof (row.data as { id?: unknown }).id !== 'string') continue;
   const normalizedData = normalizePersistedContent(row.data as Record<string, unknown>, row.owner_id ?? null);
-  if (row.content_type === 'project') result.projects.push(normalizedData);
-  if (row.content_type === 'achievement') result.achievements.push(normalizedData);
-  if (row.content_type === 'publication') result.publications.push(normalizedData);
-  if (row.content_type === 'article') result.articles.push(normalizedData);
-  if (row.content_type === 'opportunity') result.opportunities.push(normalizedData);
-  if (row.content_type === 'announcement') result.announcements.push(normalizedData);
-  if (row.content_type === 'event') result.events.push(normalizedData);
+  if (row.content_type === 'project') result.projects.push(normalizedData as unknown as Project);
+  if (row.content_type === 'achievement') result.achievements.push(normalizedData as unknown as Achievement);
+  if (row.content_type === 'publication') result.publications.push(normalizedData as unknown as Publication);
+  if (row.content_type === 'article') result.articles.push(normalizedData as unknown as Article);
+  if (row.content_type === 'opportunity') result.opportunities.push(normalizedData as unknown as Opportunity);
+  if (row.content_type === 'announcement') result.announcements.push(normalizedData as unknown as Announcement);
+  if (row.content_type === 'event') result.events.push(normalizedData as unknown as DepartmentEvent);
 }
 return result;
 };

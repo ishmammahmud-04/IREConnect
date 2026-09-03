@@ -29,14 +29,16 @@ export const Sidebar: React.FC = () => {
       </div>
 
       {/* Main Nav Items */}
-      <div className="space-y-0.5">
+      <nav className="space-y-0.5" aria-label="Primary navigation">
         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-3 py-1.5">Navigation</p>
         {links.map((link) => {
           const isActive = currentTab === link.tab;
           return (
             <button
               key={link.tab}
+              type="button"
               onClick={() => setCurrentTab(link.tab)}
+              aria-current={isActive ? 'page' : undefined}
               className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all text-left ${
                 isActive
                   ? 'bg-blue-600 text-white font-bold shadow-xs'
@@ -53,13 +55,14 @@ export const Sidebar: React.FC = () => {
             </button>
           );
         })}
-      </div>
+      </nav>
 
       {/* Quick Tools */}
       <div className="mt-4 pt-3 border-t border-slate-800 space-y-0.5">
         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-3 py-1.5">Quick Tools</p>
         
         <button
+          type="button"
           onClick={() => setIsCreateModalOpen(true)}
           className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs text-slate-300 hover:bg-slate-800 hover:text-white transition-colors text-left"
         >
@@ -68,6 +71,7 @@ export const Sidebar: React.FC = () => {
         </button>
 
         <button
+          type="button"
           onClick={() => setIsSettingsModalOpen(true)}
           className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs text-slate-300 hover:bg-slate-800 hover:text-white transition-colors text-left"
         >
@@ -76,6 +80,7 @@ export const Sidebar: React.FC = () => {
         </button>
 
         <button
+          type="button"
           onClick={() => setIsSavedModalOpen(true)}
           className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs text-slate-300 hover:bg-slate-800 hover:text-white transition-colors text-left"
         >

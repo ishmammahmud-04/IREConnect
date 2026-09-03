@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { ActivityFeed } from './ActivityFeed';
 import { ProfileCompletenessCard } from './ProfileCompletenessCard';
@@ -23,7 +23,7 @@ export const HomeDashboard: React.FC = () => {
     getMutualConnectionCount
   } = useApp();
 
-  const otherUsers = users.filter((u) => u.id !== currentUser.id);
+  const otherUsers = useMemo(() => users.filter((u) => u.id !== currentUser.id), [currentUser.id, users]);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -289,6 +289,11 @@ export const HomeDashboard: React.FC = () => {
               </div>
             </div>
           ))}
+          {otherUsers.length === 0 && (
+            <p className="md:col-span-3 rounded-xl border border-slate-200 bg-white px-4 py-6 text-center text-xs text-slate-500">
+              No other department members are available yet.
+            </p>
+          )}
         </div>
       </section>
 
@@ -372,6 +377,11 @@ export const HomeDashboard: React.FC = () => {
               </div>
             </div>
           ))}
+          {projects.length === 0 && (
+            <p className="md:col-span-2 rounded-xl border border-slate-200 bg-white px-4 py-6 text-center text-xs text-slate-500">
+              No department projects have been published yet.
+            </p>
+          )}
         </div>
       </section>
 
@@ -438,6 +448,11 @@ export const HomeDashboard: React.FC = () => {
               </div>
             </div>
           ))}
+          {opportunities.length === 0 && (
+            <p className="md:col-span-2 rounded-xl border border-slate-200 bg-white px-4 py-6 text-center text-xs text-slate-500">
+              No opportunities are available right now.
+            </p>
+          )}
         </div>
       </section>
     </div>

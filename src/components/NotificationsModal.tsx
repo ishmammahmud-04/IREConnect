@@ -28,7 +28,13 @@ export const NotificationsModal: React.FC = () => {
 
   const openNotification = (notification: AppNotification) => {
     if (!notification.isRead) void markNotificationAsRead(notification.id);
-    if (notification.destination) setCurrentTab(notification.destination);
+    const destination = notification.destination;
+    if (destination === 'home' || destination === 'network' || destination === 'opportunities' || destination === 'department' || destination === 'profile') {
+      setCurrentTab(destination);
+    } else if (destination) {
+      // Never allow stale persisted destinations to leave the app on an invalid screen.
+      setCurrentTab('home');
+    }
     setIsNotificationsModalOpen(false);
   };
 

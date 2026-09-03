@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import {
   User,
   Project,
@@ -18,9 +18,48 @@ import {
   FeedComment,
   FeedReactionSummary
 } from '../types';
+import type { Education, Experience } from '../types';
 import { supabase } from '../lib/supabase';
 
 export type MainTab = 'home' | 'discover' | 'network' | 'opportunities' | 'profile' | 'department' | 'admin';
+type EditableContent = {
+  id: string;
+  title?: string;
+  category?: string;
+  type?: string;
+  description?: string;
+  abstract?: string;
+  body?: string[];
+  tags?: string[];
+  technologies?: string[];
+  keywords?: string[];
+  journal?: string;
+  organization?: string;
+  conference?: string;
+  externalUrl?: string;
+  applicationUrl?: string;
+  certificateUrl?: string;
+  authors?: string[];
+  problem?: string;
+  solution?: string;
+  batch?: string;
+  year?: string;
+  status?: string;
+  demoUrl?: string;
+  docUrl?: string;
+  subtitle?: string;
+  publicationType?: string;
+  date?: string;
+  time?: string;
+  location?: string;
+  coverImage?: string;
+  image?: string;
+  pdfUrl?: string;
+  supervisor?: Project['supervisor'];
+  teamMembers?: Project['teamMembers'];
+  ownerId?: string;
+};
+type LinkedInProfileData = { headline?: string; skills?: string[]; experience?: Experience[]; education?: Education[] };
 
 interface AppContextType {
   currentUser: User;
@@ -50,12 +89,12 @@ interface AppContextType {
   searchDirectoryUsers: (query: string) => Promise<void>;
   adminVerificationQueue: VerificationRequest[];
   verificationRequests: VerificationRequest[];
-  approveVerification: (requestId: string) => void;
-  rejectVerification: (requestId: string) => void;
+  approveVerification: (requestId: string) => Promise<boolean>;
+  rejectVerification: (requestId: string) => Promise<boolean>;
   flaggedItems: ModerationReport[];
   moderationReports: ModerationReport[];
-  resolveFlaggedItem: (reportId: string, action: 'dismiss' | 'remove') => void;
-  resolveModerationReport: (reportId: string, action: 'approve' | 'remove') => void;
+  resolveFlaggedItem: (reportId: string, action: 'dismiss' | 'remove') => Promise<boolean>;
+  resolveModerationReport: (reportId: string, action: 'approve' | 'remove') => Promise<boolean>;
   connectionRequests: ConnectionRequest[];
   linkedInImports: LinkedInImportItem[];
   savedItemIds: Set<string>;
@@ -79,10 +118,10 @@ interface AppContextType {
   // Actions
   toggleSaveItem: (id: string) => void;
   isItemSaved: (id: string) => boolean;
-  acceptConnectionRequest: (requestId: string) => void;
-  declineConnectionRequest: (requestId: string) => void;
-  sendConnectionRequest: (userId: string) => void;
-  submitMentorshipRequest: (request: { mentorId: string; topic: string; goals: string; preferredFrequency: string }) => void;
+  acceptConnectionRequest: (requestId: string) => Promise<void>;
+  declineConnectionRequest: (requestId: string) => Promise<void>;
+  sendConnectionRequest: (userId: string) => Promise<void>;
+  submitMentorshipRequest: (request: { mentorId: string; topic: string; goals: string; preferredFrequency: string }) => Promise<void>;
   createProject: (project: Project) => void;
   addProject: (project: Project) => void;
   createAchievement: (achievement: Achievement) => void;
@@ -94,13 +133,13 @@ interface AppContextType {
   createOpportunity: (opportunity: Opportunity) => void;
   addOpportunity: (opportunity: Opportunity) => void;
   createAnnouncement: (announcement: Partial<Announcement> & { title: string; description: string }) => void;
-  addAnnouncement: (announcement: Partial<Announcement> & { title: string; description: string }) => void;
+  addAnnouncement: (announcement: Partial<Announcement> & { title: string; description: string }) => Promise<boolean>;
   deletePublishedContent: (contentType: 'project' | 'publication' | 'achievement' | 'article' | 'opportunity' | 'announcement' | 'event', id: string) => Promise<boolean>;
-  updatePublishedContent: (contentType: 'project' | 'publication' | 'achievement' | 'article' | 'opportunity' | 'announcement' | 'event', item: any) => Promise<boolean>;
-  publishAnnouncement?: (announcement: Partial<Announcement> & { title: string; description: string }) => void;
+  updatePublishedContent: (contentType: 'project' | 'publication' | 'achievement' | 'article' | 'opportunity' | 'announcement' | 'event', item: EditableContent) => Promise<boolean>;
+  publishAnnouncement?: (announcement: Partial<Announcement> & { title: string; description: string }) => Promise<boolean>;
   submitReport: (contentTitle: string, reason: string, details: string) => void;
   getConnectionStatus: (userId: string) => 'connected' | 'pending' | 'none';
-  applyLinkedInData: (data: { headline?: string; skills?: string[]; experience?: any[]; education?: any[] }) => void;
+  applyLinkedInData: (data: LinkedInProfileData) => void;
   syncLinkedInSelected: (selectedIds: string[]) => void;
   syncLinkedInAll: () => void;
   toggleLinkedInSelect: (id: string) => void;
@@ -141,8 +180,8 @@ interface AppContextType {
   isCreateModalOpen: boolean;
   setIsCreateModalOpen: (open: boolean) => void;
   createModalInitialType?: string;
-  createModalEditingItem?: { type: 'project' | 'publication' | 'achievement' | 'article' | 'opportunity' | 'announcement'; item: any } | null;
-  setCreateModalEditingItem: (item: { type: 'project' | 'publication' | 'achievement' | 'article' | 'opportunity' | 'announcement'; item: any } | null) => void;
+  createModalEditingItem?: { type: 'project' | 'publication' | 'achievement' | 'article' | 'opportunity' | 'announcement'; item: EditableContent } | null;
+  setCreateModalEditingItem: (item: { type: 'project' | 'publication' | 'achievement' | 'article' | 'opportunity' | 'announcement'; item: EditableContent } | null) => void;
   openCreateModalWithType: (type: string) => void;
   
   isSettingsModalOpen: boolean;
@@ -184,6 +223,8 @@ const emptyUser: User = {
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User>(emptyUser);
+  const currentUserIdRef = useRef('');
+  currentUserIdRef.current = currentUser.id;
   const [isAdmin, setIsAdmin] = useState(false);
   const [currentTab, setCurrentTabState] = useState<MainTab>('home');
   const [feedComments, setFeedComments] = useState<FeedComment[]>([]);
@@ -202,6 +243,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [workflowItems, setWorkflowItems] = useState<WorkflowItem[]>([]);
   const [linkedInImports, setLinkedInImports] = useState<LinkedInImportItem[]>([]);
   const [savedItemIds, setSavedItemIds] = useState<Set<string>>(new Set());
+  const savedItemIdsRef = useRef<Set<string>>(new Set());
+  const saveMutationQueues = useRef<Record<string, Promise<void>>>({});
+  const notificationReadVersions = useRef<Map<string, number>>(new Map());
   
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
   const [activeDiscoverCategory, setActiveDiscoverCategory] = useState('For You');
@@ -217,7 +261,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createModalInitialType, setCreateModalInitialType] = useState<string>('achievement');
-  const [createModalEditingItem, setCreateModalEditingItem] = useState<{ type: 'project' | 'publication' | 'achievement' | 'article' | 'opportunity' | 'announcement'; item: any } | null>(null);
+  const [createModalEditingItem, setCreateModalEditingItem] = useState<{ type: 'project' | 'publication' | 'achievement' | 'article' | 'opportunity' | 'announcement'; item: EditableContent } | null>(null);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false);
   const [isSavedModalOpen, setIsSavedModalOpen] = useState(false);
@@ -327,14 +371,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const setCurrentTab = useCallback((tab: MainTab) => {
+    if (tab === 'admin' && !isAdmin) tab = 'home';
+    setSelectedArticle(null);
+    setSelectedPublication(null);
+    setSelectedAchievement(null);
+    setSelectedProject(null);
     setSelectedUserForProfile(null);
+    setSelectedOpportunity(null);
+    setSelectedEvent(null);
     setCurrentTabState(tab);
     if (typeof window === 'undefined') return;
     const nextPath = tabToPath[tab];
     if (nextPath && window.location.pathname !== nextPath) {
       window.history.pushState({ tab }, '', nextPath);
     }
-  }, [tabToPath]);
+  }, [isAdmin, tabToPath, setSelectedArticle, setSelectedPublication, setSelectedAchievement, setSelectedProject, setSelectedUserForProfile, setSelectedOpportunity, setSelectedEvent]);
 
   const syncCurrentTabFromPath = useCallback((path: string) => {
     const normalizedPath = path.split('?')[0].replace(/\/+$/, '') || '/';
@@ -375,11 +426,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     alumni: users.filter((user) => user.role === 'alumni').length,
     projects: projects.length
   }), [projects.length, users]);
-  const getConnectionCount = (userId: string) => workflowItems.filter(
+  const getConnectionCount = useCallback((userId: string) => workflowItems.filter(
     (item) => item.workflow_type === 'connection_request' && item.status === 'accepted' && (item.requester_id === userId || item.recipient_id === userId)
-  ).length;
+  ).length, [workflowItems]);
 
-  const getMutualConnectionCount = (userId: string) => {
+  const getMutualConnectionCount = useCallback((userId: string) => {
     if (!currentUser.id || userId === currentUser.id) return 0;
 
     const myAcceptedConnectionIds = new Set(
@@ -412,29 +463,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
 
     return mutualCount;
-  };
+  }, [currentUser.id, workflowItems]);
 
-  const getConnectionStatus = (userId: string): 'connected' | 'pending' | 'none' => {
+  const getConnectionStatus = useCallback((userId: string): 'connected' | 'pending' | 'none' => {
     const workflow = workflowItems.find((item) => item.workflow_type === 'connection_request' &&
       ((item.requester_id === currentUser.id && item.recipient_id === userId) || (item.requester_id === userId && item.recipient_id === currentUser.id)));
     if (!workflow) return 'none';
     return workflow.status === 'accepted' ? 'connected' : workflow.status === 'pending' ? 'pending' : 'none';
-  };
-  const getConnectionUsers = (status: 'connected' | 'pending', direction?: 'incoming' | 'outgoing') => {
+  }, [currentUser.id, workflowItems]);
+  const getConnectionUsers = useCallback((status: 'connected' | 'pending', direction?: 'incoming' | 'outgoing') => {
     const ids = new Set(workflowItems
       .filter((item) => item.workflow_type === 'connection_request' && item.status === (status === 'connected' ? 'accepted' : 'pending'))
       .filter((item) => !direction || (direction === 'incoming' ? item.recipient_id === currentUser.id : item.requester_id === currentUser.id))
       .map((item) => item.requester_id === currentUser.id ? item.recipient_id : item.requester_id)
       .filter((id): id is string => Boolean(id)));
     return users.filter((user) => ids.has(user.id));
-  };
+  }, [currentUser.id, users, workflowItems]);
 
-  const showToast = (msg: string) => {
+  const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
     setTimeout(() => {
       setToastMessage((prev) => (prev === msg ? null : prev));
     }, 3200);
-  };
+  }, []);
 
   const confirmAction = (message: string) => {
     if (typeof window === 'undefined' || typeof window.confirm !== 'function') {
@@ -443,63 +494,92 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return window.confirm(message);
   };
 
-  const updateWorkflowStatus = async (workflowId: string, status: string, successMessage: string, errorMessage: string) => {
+  const updateWorkflowStatus = async (workflowId: string, status: string, successMessage: string, errorMessage: string): Promise<void> => {
     if (!confirmAction('Are you sure you want to update this request?')) {
       return;
     }
-    const { error } = await supabase.from('workflow_items').update({ status, updated_at: new Date().toISOString() }).eq('id', workflowId);
-    if (error) {
+    try {
+      const { error } = await supabase.from('workflow_items').update({ status, updated_at: new Date().toISOString() }).eq('id', workflowId);
+      if (error) {
+        showToast(errorMessage);
+        return;
+      }
+      setWorkflowItems((prev) => prev.map((item) => item.id === workflowId ? { ...item, status, updated_at: new Date().toISOString() } : item));
+      showToast(successMessage);
+    } catch {
       showToast(errorMessage);
-      return;
     }
-    setWorkflowItems((prev) => prev.map((item) => item.id === workflowId ? { ...item, status, updated_at: new Date().toISOString() } : item));
-    showToast(successMessage);
   };
 
-  const invokeAdminAction = async (payload: Record<string, string>, successMessage: string, errorMessage: string) => {
-    const { data, error } = await supabase.functions.invoke('admin-action', { body: payload });
-    if (error || data?.error) {
-      showToast(data?.error || errorMessage);
-      return;
+  const invokeAdminAction = async (payload: Record<string, string>, successMessage: string, errorMessage: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-action', { body: payload });
+      if (error || data?.error || data?.ok !== true) {
+        showToast(data?.error || errorMessage);
+        return false;
+      }
+      if (payload.workflowId) {
+        const nextStatus = payload.action === 'verify_user' ? 'verified' : payload.action === 'reject_verification' ? 'rejected' : payload.action === 'remove_content' ? 'dismissed' : 'resolved';
+        setWorkflowItems((prev) => prev.map((item) => item.id === payload.workflowId ? { ...item, status: nextStatus, updated_at: new Date().toISOString() } : item));
+      }
+      showToast(successMessage);
+      return true;
+    } catch {
+      showToast(errorMessage);
+      return false;
     }
-    if (payload.workflowId) {
-      const nextStatus = payload.action === 'verify_user' ? 'verified' : payload.action === 'reject_verification' ? 'rejected' : payload.action === 'remove_content' ? 'dismissed' : 'resolved';
-      setWorkflowItems((prev) => prev.map((item) => item.id === payload.workflowId ? { ...item, status: nextStatus, updated_at: new Date().toISOString() } : item));
-    }
-    showToast(successMessage);
   };
 
   const toggleSaveItem = (id: string) => {
-    setSavedItemIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-        showToast('Removed from Saved bookmarks');
-      } else {
-        next.add(id);
-        showToast('Saved to your bookmarks!');
-      }
-      return next;
-    });
-    const isSaved = savedItemIds.has(id);
-    void (isSaved
-      ? supabase.from('saved_items').delete().eq('user_id', currentUser.id).eq('item_id', id)
-      : supabase.from('saved_items').upsert({ user_id: currentUser.id, item_id: id }));
+    if (!currentUser.id) return;
+    const userId = currentUser.id;
+    const next = new Set(savedItemIdsRef.current);
+    const shouldSave = !next.has(id);
+    if (shouldSave) {
+      next.add(id);
+      showToast('Saved to your bookmarks!');
+    } else {
+      next.delete(id);
+      showToast('Removed from Saved bookmarks');
+    }
+    savedItemIdsRef.current = next;
+    setSavedItemIds(next);
+
+    const previousMutation = saveMutationQueues.current[id] || Promise.resolve();
+    const mutation = previousMutation
+      .catch(() => undefined)
+      .then(async () => {
+        const result = shouldSave
+          ? await supabase.from('saved_items').upsert({ user_id: userId, item_id: id })
+          : await supabase.from('saved_items').delete().eq('user_id', userId).eq('item_id', id);
+        if (result.error) throw result.error;
+      })
+      .catch((error: unknown) => {
+        // Only undo this operation if no later toggle has superseded it.
+        if (currentUserIdRef.current === userId && savedItemIdsRef.current.has(id) === shouldSave) {
+          const reverted = new Set(savedItemIdsRef.current);
+          if (shouldSave) reverted.delete(id); else reverted.add(id);
+          savedItemIdsRef.current = reverted;
+          setSavedItemIds(reverted);
+        }
+        showToast(`Could not update saved bookmarks${error instanceof Error ? `: ${error.message}` : '.'}`);
+      });
+    saveMutationQueues.current[id] = mutation;
   };
 
   const isItemSaved = (id: string) => savedItemIds.has(id);
 
-  const acceptConnectionRequest = (requestId: string) => {
-    void updateWorkflowStatus(requestId, 'accepted', 'Connection request accepted!', 'Could not accept the connection request.');
+  const acceptConnectionRequest = async (requestId: string): Promise<void> => {
+    await updateWorkflowStatus(requestId, 'accepted', 'Connection request accepted!', 'Could not accept the connection request.');
   };
 
-  const declineConnectionRequest = (requestId: string) => {
-    void updateWorkflowStatus(requestId, 'declined', 'Connection request declined', 'Could not decline the connection request.');
+  const declineConnectionRequest = async (requestId: string): Promise<void> => {
+    await updateWorkflowStatus(requestId, 'declined', 'Connection request declined', 'Could not decline the connection request.');
   };
 
-  const sendConnectionRequest = (userId: string) => {
+  const sendConnectionRequest = async (userId: string): Promise<void> => {
     const targetUser = users.find((user) => user.id === userId);
-    if (!targetUser || !isUuid(userId)) {
+    if (!currentUser.id || !targetUser || !isUuid(userId) || getConnectionStatus(userId) !== 'none') {
       showToast('This profile is not available for connection requests yet.');
       return;
     }
@@ -509,17 +589,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       requester_id: currentUser.id,
       recipient_id: userId,
       status: 'pending',
-      data: { requester: currentUser, recipientName: targetUser.name },
+      data: { requester: currentUser, recipientName: targetUser.name, mutualConnections: getMutualConnectionCount(userId) },
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
     setWorkflowItems((prev) => [workflowItem, ...prev.filter((item) => item.id !== workflowItem.id)]);
-    void supabase.from('workflow_items').upsert(workflowItem).then(({ error }) => showToast(error ? 'Could not send the connection request.' : 'Connection request sent!'));
+    try {
+      const { error } = await supabase.from('workflow_items').upsert(workflowItem);
+      if (error) {
+        setWorkflowItems((prev) => prev.filter((item) => item.id !== workflowItem.id || item.status !== 'pending'));
+        showToast('Could not send the connection request.');
+        return;
+      }
+      showToast('Connection request sent!');
+    } catch {
+      setWorkflowItems((prev) => prev.filter((item) => item.id !== workflowItem.id || item.status !== 'pending'));
+      showToast('Could not send the connection request.');
+    }
   };
 
-  const submitMentorshipRequest = (request: { mentorId: string; topic: string; goals: string; preferredFrequency: string }) => {
+  const submitMentorshipRequest = async (request: { mentorId: string; topic: string; goals: string; preferredFrequency: string }): Promise<void> => {
     const mentor = users.find((user) => user.id === request.mentorId);
-    if (!mentor || !isUuid(request.mentorId)) {
+    if (!currentUser.id || !mentor || !isUuid(request.mentorId)) {
       showToast('This profile is not available for mentorship requests yet.');
       return;
     }
@@ -534,8 +625,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updated_at: new Date().toISOString()
     };
     setWorkflowItems((prev) => [workflowItem, ...prev.filter((item) => item.id !== workflowItem.id)]);
-    void supabase.from('workflow_items').upsert(workflowItem).then(({ error }) => showToast(error ? 'Could not send the mentorship request.' : 'Mentorship request sent!'));
-    setIsMentorshipModalOpen(false);
+    try {
+      const { error } = await supabase.from('workflow_items').upsert(workflowItem);
+      if (error) throw error;
+      setIsMentorshipModalOpen(false);
+      showToast('Mentorship request sent!');
+    } catch {
+      setWorkflowItems((prev) => prev.filter((item) => item.id !== workflowItem.id));
+      showToast('Could not send the mentorship request.');
+    }
   };
 
   const createProject = async (project: Project) => {
@@ -583,50 +681,55 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const addOpportunity = createOpportunity;
 
-  const createAnnouncement = async (ann: Partial<Announcement> & { title: string; description: string }) => {
+  const createAnnouncement = async (ann: Partial<Announcement> & { title: string; description: string }): Promise<boolean> => {
     const newAnn: Announcement = {
       id: ann.id || `ann-${Date.now()}`,
       ownerId: ann.ownerId || currentUser.id,
       title: ann.title,
-      category: (ann.category as any) || 'General',
+      category: ann.category || 'General',
       description: ann.description,
       isPinned: !!ann.isPinned,
       author: ann.author || currentUser.name,
       date: ann.date || 'Just now'
     };
     const ok = await persistContent('announcement', newAnn);
-    if (!ok) return;
+    if (!ok) return false;
     setAnnouncements((prev) => [newAnn, ...prev]);
     showToast(`Announcement "${ann.title}" published!`);
+    return true;
   };
 
   const addAnnouncement = createAnnouncement;
 
-  const publishAnnouncement = (ann: Partial<Announcement> & { title: string; description: string }) => {
-    void (async () => {
+  const publishAnnouncement = async (ann: Partial<Announcement> & { title: string; description: string }): Promise<boolean> => {
+    try {
       const { data, error } = await supabase.functions.invoke('admin-action', {
         body: { action: 'publish_announcement', title: ann.title, description: ann.description, category: String(ann.category || 'General'), isPinned: String(!!ann.isPinned) }
       });
-      if (error || data?.error) {
+      if (error || data?.error || data?.ok !== true) {
         showToast(data?.error || 'Announcement publishing failed.');
-        return;
+        return false;
       }
       if (data?.announcement) setAnnouncements((prev) => [data.announcement as Announcement, ...prev]);
       showToast(`Announcement "${ann.title}" published successfully!`);
-    })();
+      return true;
+    } catch {
+      showToast('Announcement publishing failed.');
+      return false;
+    }
   };
 
   const approveVerification = (requestId: string) => {
-    void invokeAdminAction({ action: 'verify_user', workflowId: requestId }, 'Verification approved and badge issued.', 'Could not approve the verification request.');
+    return invokeAdminAction({ action: 'verify_user', workflowId: requestId }, 'Verification approved and badge issued.', 'Could not approve the verification request.');
   };
 
   const rejectVerification = (requestId: string) => {
-    void invokeAdminAction({ action: 'reject_verification', workflowId: requestId }, 'Verification request rejected.', 'Could not reject the verification request.');
+    return invokeAdminAction({ action: 'reject_verification', workflowId: requestId }, 'Verification request rejected.', 'Could not reject the verification request.');
   };
 
   const resolveFlaggedItem = (reportId: string, action: 'dismiss' | 'remove') => {
     const resolvedAction = action === 'remove' ? 'remove_content' : 'dismiss_report';
-    void invokeAdminAction(
+    return invokeAdminAction(
       { action: resolvedAction, workflowId: reportId },
       action === 'remove' ? 'Flagged content removed.' : 'Report dismissed.',
       action === 'remove' ? 'Could not remove the flagged content.' : 'Could not dismiss the report.'
@@ -635,19 +738,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const resolveModerationReport = (reportId: string, action: 'approve' | 'remove') => {
     const resolvedAction = action === 'remove' ? 'remove_content' : 'dismiss_report';
-    void invokeAdminAction(
+    return invokeAdminAction(
       { action: resolvedAction, workflowId: reportId },
       action === 'remove' ? 'Moderation report resolved and content removed.' : 'Moderation report approved and closed.',
       action === 'remove' ? 'Could not resolve the moderation report.' : 'Could not approve the moderation report.'
     );
   };
 
-  const applyLinkedInData = (data: {
-    headline?: string;
-    skills?: string[];
-    experience?: any[];
-    education?: any[];
-  }) => {
+  const applyLinkedInData = (data: LinkedInProfileData) => {
     const updatedUser = {
       ...currentUser,
       headline: data.headline || currentUser.headline,
@@ -730,9 +828,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!confirmAction('Save these notification preferences?')) {
       return;
     }
+    const previousSettings = currentUser.notificationSettings;
     setCurrentUser((prev) => ({ ...prev, notificationSettings: settings }));
-    void supabase.from('profiles').update({ notification_settings: settings, updated_at: new Date().toISOString() }).eq('user_id', currentUser.id);
-    showToast('Notification preferences saved');
+    void Promise.resolve(supabase.from('profiles').update({ notification_settings: settings, updated_at: new Date().toISOString() }).eq('user_id', currentUser.id))
+      .then(({ error }) => {
+        if (error) {
+          setCurrentUser((prev) => prev.notificationSettings === settings
+            ? { ...prev, notificationSettings: previousSettings }
+            : prev);
+          showToast(`Could not save notification preferences: ${error.message}`);
+          return;
+        }
+        showToast('Notification preferences saved');
+      })
+      .catch(() => {
+        setCurrentUser((prev) => ({ ...prev, notificationSettings: previousSettings }));
+        showToast('Could not save notification preferences');
+      });
   };
 
   const updateProfileBio = (bio: string) => {
@@ -922,11 +1034,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const markNotificationsAsRead = async () => {
-    const previousNotifications = notifications;
+    const changedIds = new Set(notifications.filter((notification) => !notification.isRead).map((notification) => notification.id));
+    const operationVersions = new Map<string, number>();
+    changedIds.forEach((id) => {
+      const version = (notificationReadVersions.current.get(id) || 0) + 1;
+      notificationReadVersions.current.set(id, version);
+      operationVersions.set(id, version);
+    });
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
     const { error } = await supabase.from('notifications').update({ is_read: true }).eq('user_id', currentUser.id).eq('is_read', false);
     if (error) {
-      setNotifications(previousNotifications);
+      setNotifications((prev) => prev.map((notification) => {
+        const version = notificationReadVersions.current.get(notification.id);
+        return changedIds.has(notification.id) && operationVersions.get(notification.id) === version
+          ? { ...notification, isRead: false }
+          : notification;
+      }));
       showToast(`Could not save notification status: ${error.message}`);
       return;
     }
@@ -934,28 +1057,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const markNotificationAsRead = async (notificationId: string) => {
-    const previousNotifications = notifications;
+    const wasUnread = notifications.some((notification) => notification.id === notificationId && !notification.isRead);
+    const operationVersion = (notificationReadVersions.current.get(notificationId) || 0) + 1;
+    notificationReadVersions.current.set(notificationId, operationVersion);
     setNotifications((prev) => prev.map((notification) => notification.id === notificationId ? { ...notification, isRead: true } : notification));
     const { error } = await supabase.from('notifications').update({ is_read: true }).eq('id', notificationId).eq('user_id', currentUser.id);
     if (error) {
-      setNotifications(previousNotifications);
+      if (wasUnread && notificationReadVersions.current.get(notificationId) === operationVersion) {
+        setNotifications((prev) => prev.map((notification) => notification.id === notificationId ? { ...notification, isRead: false } : notification));
+      }
       showToast(`Could not save notification status: ${error.message}`);
       return;
     }
   };
 
-  const hydratePersistedAccount = ({ user, notifications: persistedNotifications, savedItemIds: persistedSavedItemIds, isAdmin: persistedIsAdmin = false }: { user: User; notifications: AppNotification[]; savedItemIds: string[]; isAdmin?: boolean }) => {
+  const hydratePersistedAccount = useCallback(({ user, notifications: persistedNotifications, savedItemIds: persistedSavedItemIds, isAdmin: persistedIsAdmin = false }: { user: User; notifications: AppNotification[]; savedItemIds: string[]; isAdmin?: boolean }) => {
     setCurrentUser(user);
     setIsAdmin(persistedIsAdmin);
     setNotifications(persistedNotifications);
-    setSavedItemIds(new Set(persistedSavedItemIds));
-  };
-  const hydrateNotifications = (nextNotifications: AppNotification[]) => setNotifications(nextNotifications);
-  const hydrateWorkflows = (nextWorkflows: WorkflowItem[]) => setWorkflowItems(nextWorkflows);
-  const hydrateFeedInteractions = (comments: FeedComment[], reactions: Record<string, FeedReactionSummary>) => {
+    const nextSavedItemIds = new Set(persistedSavedItemIds);
+    savedItemIdsRef.current = nextSavedItemIds;
+    setSavedItemIds(nextSavedItemIds);
+  }, []);
+  const hydrateNotifications = useCallback((nextNotifications: AppNotification[]) => setNotifications(nextNotifications), []);
+  const hydrateWorkflows = useCallback((nextWorkflows: WorkflowItem[]) => setWorkflowItems(nextWorkflows), []);
+  const hydrateFeedInteractions = useCallback((comments: FeedComment[], reactions: Record<string, FeedReactionSummary>) => {
     setFeedComments(comments);
     setFeedReactions(reactions);
-  };
+  }, []);
   const toggleFeedReaction = async (contentId: string) => {
     if (!currentUser.id) return;
     const existing = feedReactions[contentId]?.reacted;
@@ -984,7 +1113,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setFeedComments((previous) => previous.filter((comment) => comment.id !== commentId));
   };
 
-  const hydratePersistedContent = (data: { projects: Project[]; achievements: Achievement[]; publications: Publication[]; articles: Article[]; opportunities: Opportunity[]; announcements: Announcement[]; events?: DepartmentEvent[]; milestones?: DepartmentMilestone[] }) => {
+  const hydratePersistedContent = useCallback((data: { projects: Project[]; achievements: Achievement[]; publications: Publication[]; articles: Article[]; opportunities: Opportunity[]; announcements: Announcement[]; events?: DepartmentEvent[]; milestones?: DepartmentMilestone[] }) => {
     const merge = <T extends { id: string }>(existing: T[], persisted: T[]) => [...persisted, ...existing.filter((item) => !persisted.some((storedItem) => storedItem.id === item.id))];
     setProjects((previous) => merge(previous, data.projects));
     setAchievements((previous) => merge(previous, data.achievements));
@@ -994,8 +1123,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAnnouncements((previous) => merge(previous, data.announcements));
     if (data.events) setEvents((previous) => merge(previous, data.events || []));
     if (data.milestones) setMilestones((previous) => merge(previous, data.milestones || []));
-  };
-  const hydrateDirectory = (persistedUsers: User[]) => setUsers(persistedUsers);
+  }, []);
+  const hydrateDirectory = useCallback((persistedUsers: User[]) => setUsers(persistedUsers), []);
 
   const persistContent = async (contentType: string, data: { id: string; ownerId?: string }) => {
     if (!currentUser.id) {
@@ -1021,7 +1150,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const updatePublishedContent = async (contentType: 'project' | 'publication' | 'achievement' | 'article' | 'opportunity' | 'announcement' | 'event', item: any) => {
+  const updatePublishedContent = async (contentType: 'project' | 'publication' | 'achievement' | 'article' | 'opportunity' | 'announcement' | 'event', item: EditableContent) => {
     if (!confirmAction('Save these changes to this published item?')) {
       return false;
     }
@@ -1030,25 +1159,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!ok) return false;
 
     if (contentType === 'project') {
-      setProjects((prev) => prev.map((entry) => entry.id === item.id ? { ...entry, ...item } : entry));
+      setProjects((prev) => prev.map((entry) => entry.id === item.id ? { ...entry, ...item } as Project : entry));
     }
     if (contentType === 'publication') {
-      setPublications((prev) => prev.map((entry) => entry.id === item.id ? { ...entry, ...item } : entry));
+      setPublications((prev) => prev.map((entry) => entry.id === item.id ? { ...entry, ...item } as Publication : entry));
     }
     if (contentType === 'achievement') {
-      setAchievements((prev) => prev.map((entry) => entry.id === item.id ? { ...entry, ...item } : entry));
+      setAchievements((prev) => prev.map((entry) => entry.id === item.id ? { ...entry, ...item } as Achievement : entry));
     }
     if (contentType === 'article') {
-      setArticles((prev) => prev.map((entry) => entry.id === item.id ? { ...entry, ...item } : entry));
+      setArticles((prev) => prev.map((entry) => entry.id === item.id ? { ...entry, ...item } as Article : entry));
     }
     if (contentType === 'opportunity') {
-      setOpportunities((prev) => prev.map((entry) => entry.id === item.id ? { ...entry, ...item } : entry));
+      setOpportunities((prev) => prev.map((entry) => entry.id === item.id ? { ...entry, ...item } as Opportunity : entry));
     }
     if (contentType === 'announcement') {
-      setAnnouncements((prev) => prev.map((entry) => entry.id === item.id ? { ...entry, ...item } : entry));
+      setAnnouncements((prev) => prev.map((entry) => entry.id === item.id ? { ...entry, ...item } as Announcement : entry));
     }
     if (contentType === 'event') {
-      setEvents((prev) => prev.map((entry) => entry.id === item.id ? { ...entry, ...item } : entry));
+      setEvents((prev) => prev.map((entry) => entry.id === item.id ? { ...entry, ...item } as DepartmentEvent : entry));
     }
     return true;
   };

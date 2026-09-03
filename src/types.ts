@@ -221,7 +221,7 @@ export interface Announcement {
   title: string;
   description: string;
   date: string;
-  category: 'Exam Notice' | 'Workshop' | 'Competition' | 'General' | 'Announcement';
+  category: 'Exam Notice' | 'Workshop' | 'Competition' | 'Equipment' | 'General' | 'Announcement';
   author?: string;
   isPinned?: boolean;
   image?: string;
