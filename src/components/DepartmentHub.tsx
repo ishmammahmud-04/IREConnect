@@ -5,6 +5,7 @@ import { Announcement, DepartmentEvent } from '../types';
 export const DepartmentHub: React.FC = () => {
   const {
     currentUser,
+    isAdmin,
     announcements,
     events,
     createDepartmentEvent,
@@ -43,7 +44,7 @@ export const DepartmentHub: React.FC = () => {
   });
 
   const formerFaculty = (users || []).filter((u) => u.role === 'former_faculty');
-  const canManageDepartment = currentUser.role === 'admin';
+  const canManageDepartment = isAdmin;
 
   const resetForm = () => {
     setFormTitle(''); setFormDescription(''); setFormDate(''); setFormTime(''); setFormLocation(''); setFormCategory('Workshop'); setIsAdding(false);

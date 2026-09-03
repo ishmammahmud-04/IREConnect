@@ -12,6 +12,7 @@ export const ProjectDetailModal: React.FC = () => {
     isItemSaved,
     showToast,
     currentUser,
+    isAdmin,
     deletePublishedContent,
     setCreateModalEditingItem,
     setIsCreateModalOpen,
@@ -21,7 +22,7 @@ export const ProjectDetailModal: React.FC = () => {
   if (!selectedProject) return null;
 
   const isSaved = isItemSaved(selectedProject.id);
-  const canManage = selectedProject.ownerId === currentUser.id || currentUser.role === 'admin' || (selectedProject.teamMembers || []).some((member) => member.name === currentUser.name && member.id === currentUser.id);
+  const canManage = selectedProject.ownerId === currentUser.id || isAdmin || (selectedProject.teamMembers || []).some((member) => member.name === currentUser.name && member.id === currentUser.id);
 
   const closeProjectDetail = () => {
     setSelectedProject(null);

@@ -22,6 +22,7 @@ export type MainTab = 'home' | 'discover' | 'network' | 'opportunities' | 'profi
 interface AppContextType {
   currentUser: User;
   setCurrentUser: (user: User) => void;
+  isAdmin: boolean;
   currentTab: MainTab;
   setCurrentTab: (tab: MainTab) => void;
   syncCurrentTabFromPath: (path: string) => void;
@@ -102,7 +103,7 @@ interface AppContextType {
   markNotificationsAsRead: () => Promise<void>;
   markNotificationAsRead: (notificationId: string) => Promise<void>;
   hydrateNotifications: (notifications: AppNotification[]) => void;
-  hydratePersistedAccount: (data: { user: User; notifications: AppNotification[]; savedItemIds: string[] }) => void;
+  hydratePersistedAccount: (data: { user: User; notifications: AppNotification[]; savedItemIds: string[]; isAdmin?: boolean }) => void;
   hydratePersistedContent: (data: { projects: Project[]; achievements: Achievement[]; publications: Publication[]; articles: Article[]; opportunities: Opportunity[]; announcements: Announcement[]; events?: DepartmentEvent[] }) => void;
   hydrateDirectory: (users: User[]) => void;
   hydrateWorkflows: (workflows: WorkflowItem[]) => void;
@@ -130,8 +131,6 @@ interface AppContextType {
   setCreateModalEditingItem: (item: { type: 'project' | 'publication' | 'achievement' | 'article' | 'opportunity' | 'announcement'; item: any } | null) => void;
   openCreateModalWithType: (type: string) => void;
   
-  isLinkedInModalOpen: boolean;
-  setIsLinkedInModalOpen: (open: boolean) => void;
   isSettingsModalOpen: boolean;
   setIsSettingsModalOpen: (open: boolean) => void;
   isNotificationsModalOpen: boolean;
@@ -171,6 +170,7 @@ const emptyUser: User = {
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User>(emptyUser);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [currentTab, setCurrentTabState] = useState<MainTab>('home');
   const [users, setUsers] = useState<User[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -201,7 +201,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createModalInitialType, setCreateModalInitialType] = useState<string>('achievement');
   const [createModalEditingItem, setCreateModalEditingItem] = useState<{ type: 'project' | 'publication' | 'achievement' | 'article' | 'opportunity' | 'announcement'; item: any } | null>(null);
-  const [isLinkedInModalOpen, setIsLinkedInModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false);
   const [isSavedModalOpen, setIsSavedModalOpen] = useState(false);
@@ -605,7 +604,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updated_at: new Date().toISOString()
     }).eq('user_id', currentUser.id);
     showToast('LinkedIn profile synchronized successfully!');
-    setIsLinkedInModalOpen(false);
   };
 
   const submitReport = (contentTitle: string, reason: string, details: string) => {
@@ -641,12 +639,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const syncLinkedInSelected = (selectedIds: string[]) => {
     showToast(`Successfully imported ${selectedIds.length} items from LinkedIn!`);
-    setIsLinkedInModalOpen(false);
   };
 
   const syncLinkedInAll = () => {
     showToast('Synced all external achievements & certifications from LinkedIn!');
-    setIsLinkedInModalOpen(false);
   };
 
   const updateUserPrivacy = (settings: User['privacy']) => {
@@ -850,8 +846,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setNotifications((prev) => prev.map((notification) => notification.id === notificationId ? { ...notification, isRead: true } : notification));
   };
 
-  const hydratePersistedAccount = ({ user, notifications: persistedNotifications, savedItemIds: persistedSavedItemIds }: { user: User; notifications: AppNotification[]; savedItemIds: string[] }) => {
+  const hydratePersistedAccount = ({ user, notifications: persistedNotifications, savedItemIds: persistedSavedItemIds, isAdmin: persistedIsAdmin = false }: { user: User; notifications: AppNotification[]; savedItemIds: string[]; isAdmin?: boolean }) => {
     setCurrentUser(user);
+    setIsAdmin(persistedIsAdmin);
     setNotifications(persistedNotifications);
     setSavedItemIds(new Set(persistedSavedItemIds));
   };
@@ -976,6 +973,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const contextValue = useMemo(() => ({
     currentUser,
     setCurrentUser,
+    isAdmin,
     currentTab,
     setCurrentTab,
     syncCurrentTabFromPath,
@@ -1074,8 +1072,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     createModalEditingItem,
     setCreateModalEditingItem,
     openCreateModalWithType,
-    isLinkedInModalOpen,
-    setIsLinkedInModalOpen,
     isSettingsModalOpen,
     setIsSettingsModalOpen,
     isNotificationsModalOpen,
@@ -1190,7 +1186,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     createModalInitialType,
     createModalEditingItem,
     openCreateModalWithType,
-    isLinkedInModalOpen,
     isSettingsModalOpen,
     isNotificationsModalOpen,
     isChatModalOpen,
@@ -1212,7 +1207,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setSelectedEvent,
     setIsCreateModalOpen,
     setCreateModalEditingItem,
-    setIsLinkedInModalOpen,
     setIsSettingsModalOpen,
     setIsNotificationsModalOpen,
     setIsChatModalOpen,

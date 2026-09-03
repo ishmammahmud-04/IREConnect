@@ -19,7 +19,6 @@ import { AchievementDetailModal } from './components/AchievementDetailModal';
 import { ProjectDetailModal } from './components/ProjectDetailModal';
 import { OpportunityDetailModal } from './components/OpportunityDetailModal';
 import { CreateModal } from './components/CreateModal';
-import { LinkedInImportModal } from './components/LinkedInImportModal';
 import { MentorshipModal } from './components/MentorshipModal';
 import { PrivacySettingsModal } from './components/PrivacySettingsModal';
 import { SavedBookmarksModal } from './components/SavedBookmarksModal';
@@ -87,6 +86,7 @@ const MainContent: React.FC = () => {
     setSelectedArticle,
     toastMessage,
     currentUser,
+    isAdmin,
     users,
     projects,
     publications,
@@ -260,7 +260,7 @@ const MainContent: React.FC = () => {
       case 'profile':
         return <ProfileView />;
       case 'admin':
-        return currentUser.role === 'admin' ? <AdminControlSuite /> : <HomeDashboard />;
+        return isAdmin ? <AdminControlSuite /> : <HomeDashboard />;
       default:
         return <HomeDashboard />;
     }
@@ -292,7 +292,6 @@ const MainContent: React.FC = () => {
       <ProjectDetailModal />
       <OpportunityDetailModal />
       <CreateModal />
-      <LinkedInImportModal />
       <MentorshipModal />
       <PrivacySettingsModal />
       <SavedBookmarksModal />
@@ -359,6 +358,7 @@ const AuthGate: React.FC = () => {
       const loadedUser = profileResult.data ? profileRowToUser(profileResult.data, fallbackUser, hasAdminAccess) : fallbackUser;
       hydratePersistedAccount({
         user: hasAdminAccess ? { ...loadedUser, role: 'admin', verificationStatus: 'Admin' } : loadedUser,
+        isAdmin: hasAdminAccess,
         notifications: notificationResult.error ? [] : notificationResult.data.map(notificationRowToAppNotification),
         savedItemIds: savedItemResult.error ? [] : savedItemResult.data.map((item) => item.item_id)
       });

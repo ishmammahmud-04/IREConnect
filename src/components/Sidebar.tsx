@@ -2,7 +2,7 @@ import React from 'react';
 import { useApp, MainTab } from '../context/AppContext';
 
 export const Sidebar: React.FC = () => {
-  const { currentTab, setCurrentTab, currentUser, setIsCreateModalOpen, setIsLinkedInModalOpen, setIsSavedModalOpen } = useApp();
+  const { currentTab, setCurrentTab, currentUser, setIsCreateModalOpen, setIsSettingsModalOpen, setIsSavedModalOpen } = useApp();
 
   const links: { tab: MainTab; label: string; icon: string }[] = [
     { tab: 'home', label: 'Home Dashboard', icon: 'home' },
@@ -68,11 +68,11 @@ export const Sidebar: React.FC = () => {
         </button>
 
         <button
-          onClick={() => setIsLinkedInModalOpen(true)}
+          onClick={() => setIsSettingsModalOpen(true)}
           className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs text-slate-300 hover:bg-slate-800 hover:text-white transition-colors text-left"
         >
-          <span className="material-symbols-outlined text-[16px] text-sky-400">sync</span>
-          <span>LinkedIn Sync</span>
+          <span className="material-symbols-outlined text-[16px] text-sky-400">edit</span>
+          <span>Add LinkedIn</span>
         </button>
 
         <button

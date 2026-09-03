@@ -22,7 +22,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
     setSelectedArticle,
     setSelectedOpportunity,
     setIsSettingsModalOpen,
-    setIsLinkedInModalOpen,
     openMentorshipRequest,
     sendConnectionRequest,
     showToast,
@@ -236,11 +235,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
                   <span>Settings</span>
                 </button>
                 <button
-                  onClick={() => setIsLinkedInModalOpen(true)}
+                  onClick={() => setIsSettingsModalOpen(true)}
                   className="px-3 py-1.5 rounded-lg bg-[#0077b5] text-white text-xs font-bold hover:bg-[#005f93] transition-colors flex items-center gap-1.5 shadow-2xs"
                 >
-                  <span className="material-symbols-outlined text-[15px]">sync</span>
-                  <span>LinkedIn Sync</span>
+                  <span className="material-symbols-outlined text-[15px]">edit</span>
+                  <span>Edit LinkedIn Link</span>
                 </button>
               </>
             ) : (

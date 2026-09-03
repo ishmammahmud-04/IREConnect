@@ -4,6 +4,7 @@ import { useApp } from '../context/AppContext';
 export const AdminControlSuite: React.FC = () => {
   const {
     currentUser,
+    isAdmin,
     adminVerificationQueue = [],
     verificationRequests = [],
     approveVerification,
@@ -24,7 +25,7 @@ export const AdminControlSuite: React.FC = () => {
   const [broadcastDescription, setBroadcastDescription] = useState('');
   const [broadcastIsPinned, setBroadcastIsPinned] = useState(false);
 
-  if (currentUser.role !== 'admin') return null;
+  if (!isAdmin) return null;
 
   const activeQueue = adminVerificationQueue.length > 0 ? adminVerificationQueue : verificationRequests;
   const activeReports = flaggedItems.length > 0 ? flaggedItems : moderationReports;
