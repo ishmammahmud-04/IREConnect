@@ -60,13 +60,40 @@ declare
   content_owner uuid;
   content_title text;
   actor_name text;
+  owner_notification_settings jsonb;
+  content_interactions_enabled boolean;
 begin
-  select owner_id, coalesce(data->>'title', 'your content')
-    into content_owner, content_title
-    from public.content_items
-    where id = new.content_id;
+  select item.owner_id, coalesce(item.data->>'title', 'your content'), owner_profile.notification_settings
+    into content_owner, content_title, owner_notification_settings
+    from public.content_items item
+    left join public.profiles owner_profile on owner_profile.user_id = item.owner_id
+    where item.id = new.content_id;
 
   if content_owner is null or content_owner = new.user_id then
+    return new;
+  end if;
+
+  -- Support both profile JSON naming conventions and default to enabled for
+  -- missing or unrecognized values.
+  content_interactions_enabled := case
+    when jsonb_typeof(owner_notification_settings) = 'object'
+      and owner_notification_settings ? 'contentInteractions' then
+      case lower(owner_notification_settings->>'contentInteractions')
+        when 'false' then false
+        when '0' then false
+        else true
+      end
+    when jsonb_typeof(owner_notification_settings) = 'object'
+      and owner_notification_settings ? 'content_interactions' then
+      case lower(owner_notification_settings->>'content_interactions')
+        when 'false' then false
+        when '0' then false
+        else true
+      end
+    else true
+  end;
+
+  if not content_interactions_enabled then
     return new;
   end if;
 
