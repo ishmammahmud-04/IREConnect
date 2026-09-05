@@ -137,7 +137,7 @@ interface AppContextType {
   deletePublishedContent: (contentType: 'project' | 'publication' | 'achievement' | 'article' | 'opportunity' | 'announcement' | 'event', id: string) => Promise<boolean>;
   updatePublishedContent: (contentType: 'project' | 'publication' | 'achievement' | 'article' | 'opportunity' | 'announcement' | 'event', item: EditableContent) => Promise<boolean>;
   publishAnnouncement?: (announcement: Partial<Announcement> & { title: string; description: string }) => Promise<boolean>;
-  submitReport: (contentTitle: string, reason: string, details: string) => void;
+  submitReport: (contentTitle: string, reason: string, details: string, contentType?: string, contentId?: string) => void;
   getConnectionStatus: (userId: string) => 'connected' | 'pending' | 'none';
   applyLinkedInData: (data: LinkedInProfileData) => void;
   syncLinkedInSelected: (selectedIds: string[]) => void;
@@ -277,16 +277,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isChatModalOpen, setIsChatModalOpen] = useState(false);
   const [chatTargetUser, setChatTargetUser] = useState<User | null>(null);
 
-  const toggleEventRsvp = (eventId: string) => {
+  const toggleEventRsvp = async (eventId: string) => {
+    if (!currentUser.id) {
+      showToast('Please sign in to RSVP.');
+      return;
+    }
+    const currentEvent = events.find((item) => item.id === eventId);
+    if (!currentEvent) return;
+    const isCurrentlyRsvped = Boolean(currentEvent.isUserRsvped);
+    const nextRsvped = !isCurrentlyRsvped;
+
     setEvents((prev) => prev.map((event) => {
       if (event.id !== eventId) return event;
-      const isRsvped = !event.isUserRsvped;
-      const attendeesCount = Math.max(0, (event.attendeesCount ?? event.participantsCount ?? 0) + (isRsvped ? 1 : -1));
-      return { ...event, isUserRsvped: isRsvped, attendeesCount };
+      const attendeesCount = Math.max(0, (event.attendeesCount ?? event.participantsCount ?? 0) + (nextRsvped ? 1 : -1));
+      return { ...event, isUserRsvped: nextRsvped, attendeesCount };
     }));
-    const event = events.find((item) => item.id === eventId);
-    if (event) {
-      showToast(event.isUserRsvped ? `RSVP cancelled for ${event.title}.` : `RSVP confirmed for ${event.title}.`);
+
+    try {
+      if (isCurrentlyRsvped) {
+        const { error } = await supabase
+          .from('event_rsvps')
+          .delete()
+          .eq('event_id', eventId)
+          .eq('user_id', currentUser.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('event_rsvps')
+          .upsert({ event_id: eventId, user_id: currentUser.id }, { onConflict: 'event_id,user_id' });
+        if (error) throw error;
+      }
+      showToast(nextRsvped ? `RSVP confirmed for ${currentEvent.title}.` : `RSVP cancelled for ${currentEvent.title}.`);
+    } catch {
+      setEvents((prev) => prev.map((event) => {
+        if (event.id !== eventId) return event;
+        const attendeesCount = Math.max(0, (event.attendeesCount ?? event.participantsCount ?? 0) + (isCurrentlyRsvped ? 1 : -1));
+        return { ...event, isUserRsvped: isCurrentlyRsvped, attendeesCount };
+      }));
+      showToast('Could not update RSVP. Please try again.');
     }
   };
 
@@ -764,7 +792,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('LinkedIn profile synchronized successfully!');
   };
 
-  const submitReport = (contentTitle: string, reason: string, details: string) => {
+  const submitReport = (contentTitle: string, reason: string, details: string, contentType: string = 'Article', contentId: string = 'custom-id') => {
     const workflowItem: WorkflowItem = {
       id: `report-${Date.now()}`,
       workflow_type: 'moderation_report',
@@ -772,8 +800,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       recipient_id: null,
       status: 'pending',
       data: {
-        contentId: 'custom-id',
-        contentType: 'Article',
+        contentId,
+        contentType,
         contentTitle,
         reason,
         reportedBy: currentUser.name,
@@ -1190,7 +1218,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     try {
-      const { error } = await supabase.from('content_items').delete().eq('id', id).eq('owner_id', currentUser.id);
+      let query = supabase.from('content_items').delete().eq('id', id);
+      if (!isAdmin) {
+        query = query.eq('owner_id', currentUser.id);
+      }
+      const { error } = await query;
       if (error) throw error;
 
       if (contentType === 'project') setProjects((prev) => prev.filter((entry) => entry.id !== id));

@@ -2,7 +2,7 @@
 
 ## Supabase
 
-Run migrations `001` through `007` in Supabase SQL Editor in filename order. This creates the tables, realtime publication, admin policies, profile-media bucket, and Storage policies.
+Run migrations `001` through `019` in Supabase SQL Editor in numerical order. This creates core tables, authentication rules, media buckets, messaging, activity feeds, notification preferences, event RSVP support, and administrator policies.
 
 Deploy the admin function with the Supabase CLI from the project root:
 

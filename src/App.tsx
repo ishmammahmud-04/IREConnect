@@ -27,7 +27,7 @@ import { ChatModal } from './components/ChatModal';
 import { AuthScreen } from './components/AuthScreen';
 import { AdminControlSuite } from './components/AdminControlSuite';
 import { supabase } from './lib/supabase';
-import { Achievement, Announcement, AppNotification, Article, DepartmentEvent, Opportunity, Project, Publication, User, WorkflowItem } from './types';
+import { Achievement, Announcement, AppNotification, Article, DepartmentEvent, FeedComment, FeedReactionSummary, Opportunity, Project, Publication, User, WorkflowItem } from './types';
 
 type RouteState = {
   tab: 'home' | 'discover' | 'network' | 'opportunities' | 'department' | 'profile' | 'admin';
@@ -350,7 +350,7 @@ export default function App() {
 }
 
 const AuthGate: React.FC = () => {
-  const { setCurrentUser, hydratePersistedAccount, hydratePersistedContent, hydrateDirectory, hydrateWorkflows, hydrateNotifications } = useApp();
+  const { setCurrentUser, hydratePersistedAccount, hydratePersistedContent, hydrateDirectory, hydrateWorkflows, hydrateNotifications, hydrateFeedInteractions } = useApp();
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDataLoading, setIsDataLoading] = useState(false);
@@ -405,8 +405,11 @@ const AuthGate: React.FC = () => {
       supabase.from('department_milestones').select('*').order('created_at', { ascending: false }),
       supabase.from('profiles').select('*'),
       supabase.from('workflow_items').select('*').order('created_at', { ascending: false }),
-      supabase.from('admin_users').select('user_id').eq('user_id', session.user.id).eq('status', 'active').maybeSingle()
-    ]).then(([profileResult, notificationResult, savedItemResult, contentResult, milestoneResult, directoryResult, workflowResult, adminResult]) => {
+      supabase.from('admin_users').select('user_id').eq('user_id', session.user.id).eq('status', 'active').maybeSingle(),
+      supabase.from('content_reactions').select('content_id, user_id'),
+      supabase.from('content_comments').select('*').order('created_at', { ascending: true }),
+      supabase.from('event_rsvps').select('event_id, user_id')
+    ]).then(([profileResult, notificationResult, savedItemResult, contentResult, milestoneResult, directoryResult, workflowResult, adminResult, reactionsResult, commentsResult, rsvpResult]) => {
       if (!active) return;
       if (profileResult.error) throw profileResult.error;
       const hasAdminAccess = !adminResult.error && Boolean(adminResult.data);
@@ -417,7 +420,29 @@ const AuthGate: React.FC = () => {
         notifications: notificationResult.error ? [] : notificationResult.data.map(notificationRowToAppNotification),
         savedItemIds: savedItemResult.error ? [] : savedItemResult.data.map((item) => item.item_id)
       });
-      if (!contentResult.error) hydratePersistedContent({ ...contentRowsToAppData(contentResult.data), milestones: milestoneResult.error ? [] : milestoneResult.data });
+      if (!commentsResult.error && !reactionsResult.error) {
+        const comments: FeedComment[] = (commentsResult.data || []).map((row) => ({
+          id: row.id,
+          contentId: row.content_id,
+          userId: row.user_id,
+          body: row.body,
+          createdAt: row.created_at
+        }));
+        const reactions: Record<string, FeedReactionSummary> = {};
+        (reactionsResult.data || []).forEach((row) => {
+          reactions[row.content_id] = {
+            count: (reactions[row.content_id]?.count || 0) + 1,
+            reacted: reactions[row.content_id]?.reacted || row.user_id === session.user.id
+          };
+        });
+        hydrateFeedInteractions(comments, reactions);
+      }
+      if (!contentResult.error) {
+        hydratePersistedContent({
+          ...contentRowsToAppData(contentResult.data, rsvpResult.data || [], session.user.id),
+          milestones: milestoneResult.error ? [] : milestoneResult.data
+        });
+      }
       if (!directoryResult.error) hydrateDirectory(directoryResult.data.map(profileRowToDirectoryUser));
       if (!workflowResult.error) hydrateWorkflows(workflowResult.data as WorkflowItem[]);
     }).catch((error: unknown) => {
@@ -560,20 +585,43 @@ if (typeof next.ownerId !== 'string' && typeof ownerId === 'string' && ownerId) 
 return next as T;
 };
 
-const contentRowsToAppData = (rows: Array<{ content_type: string; data: unknown; owner_id?: string | null }>) => {
-const result: { projects: Project[]; achievements: Achievement[]; publications: Publication[]; articles: Article[]; opportunities: Opportunity[]; announcements: Announcement[]; events: DepartmentEvent[] } = { projects: [], achievements: [], publications: [], articles: [], opportunities: [], announcements: [], events: [] };
-for (const row of rows) {
-  if (!row.data || typeof row.data !== 'object' || Array.isArray(row.data) || typeof (row.data as { id?: unknown }).id !== 'string') continue;
-  const normalizedData = normalizePersistedContent(row.data as Record<string, unknown>, row.owner_id ?? null);
-  if (row.content_type === 'project') result.projects.push(normalizedData as unknown as Project);
-  if (row.content_type === 'achievement') result.achievements.push(normalizedData as unknown as Achievement);
-  if (row.content_type === 'publication') result.publications.push(normalizedData as unknown as Publication);
-  if (row.content_type === 'article') result.articles.push(normalizedData as unknown as Article);
-  if (row.content_type === 'opportunity') result.opportunities.push(normalizedData as unknown as Opportunity);
-  if (row.content_type === 'announcement') result.announcements.push(normalizedData as unknown as Announcement);
-  if (row.content_type === 'event') result.events.push(normalizedData as unknown as DepartmentEvent);
-}
-return result;
+const contentRowsToAppData = (
+  rows: Array<{ content_type: string; data: unknown; owner_id?: string | null }>,
+  rsvps: Array<{ event_id: string; user_id: string }> = [],
+  currentUserId?: string
+) => {
+  const result: { projects: Project[]; achievements: Achievement[]; publications: Publication[]; articles: Article[]; opportunities: Opportunity[]; announcements: Announcement[]; events: DepartmentEvent[] } = { projects: [], achievements: [], publications: [], articles: [], opportunities: [], announcements: [], events: [] };
+  const rsvpsByEventId: Record<string, { count: number; userRsvped: boolean }> = {};
+  for (const rsvp of rsvps) {
+    if (!rsvpsByEventId[rsvp.event_id]) {
+      rsvpsByEventId[rsvp.event_id] = { count: 0, userRsvped: false };
+    }
+    rsvpsByEventId[rsvp.event_id].count += 1;
+    if (currentUserId && rsvp.user_id === currentUserId) {
+      rsvpsByEventId[rsvp.event_id].userRsvped = true;
+    }
+  }
+
+  for (const row of rows) {
+    if (!row.data || typeof row.data !== 'object' || Array.isArray(row.data) || typeof (row.data as { id?: unknown }).id !== 'string') continue;
+    const normalizedData = normalizePersistedContent(row.data as Record<string, unknown>, row.owner_id ?? null);
+    if (row.content_type === 'project') result.projects.push(normalizedData as unknown as Project);
+    if (row.content_type === 'achievement') result.achievements.push(normalizedData as unknown as Achievement);
+    if (row.content_type === 'publication') result.publications.push(normalizedData as unknown as Publication);
+    if (row.content_type === 'article') result.articles.push(normalizedData as unknown as Article);
+    if (row.content_type === 'opportunity') result.opportunities.push(normalizedData as unknown as Opportunity);
+    if (row.content_type === 'announcement') result.announcements.push(normalizedData as unknown as Announcement);
+    if (row.content_type === 'event') {
+      const eventData = normalizedData as unknown as DepartmentEvent;
+      const rsvpMeta = rsvpsByEventId[eventData.id];
+      if (rsvpMeta) {
+        eventData.attendeesCount = rsvpMeta.count;
+        eventData.isUserRsvped = rsvpMeta.userRsvped;
+      }
+      result.events.push(eventData);
+    }
+  }
+  return result;
 };
 
 const toAppUser = (user: Session['user']): User => {

@@ -1,13 +1,28 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
+const ALLOWED_ORIGINS = [
+  'https://ireconnect.vercel.app',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000'
+];
+
+const getCorsHeaders = (request: Request) => {
+  const origin = request.headers.get('Origin') || '';
+  const customOrigin = Deno.env.get('ALLOWED_ORIGIN');
+  const isAllowed = ALLOWED_ORIGINS.includes(origin) || (customOrigin && origin === customOrigin);
+  return {
+    'Access-Control-Allow-Origin': isAllowed ? origin : ALLOWED_ORIGINS[0],
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Vary': 'Origin'
+  };
 };
 
 type Action = 'verify_user' | 'reject_verification' | 'remove_content' | 'dismiss_report' | 'publish_announcement' | 'delete_account';
 
 Deno.serve(async (request) => {
+  const corsHeaders = getCorsHeaders(request);
+  const json = (body: Record<string, unknown>, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   try {
     const authorization = request.headers.get('Authorization');
@@ -141,5 +156,3 @@ Deno.serve(async (request) => {
     return json({ error: error instanceof Error ? error.message : 'Unexpected server error.' }, 500);
   }
 });
-
-const json = (body: Record<string, unknown>, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
