@@ -374,18 +374,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setDirectorySearchResults(null);
       return;
     }
-    const pattern = `%${normalizedQuery.replace(/[%_]/g, '\\$&')}%`;
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .or(`full_name.ilike.${pattern},headline.ilike.${pattern},location.ilike.${pattern}`)
-      .order('full_name')
-      .limit(50);
+    const { data, error } = await supabase.rpc('search_profiles', { query: normalizedQuery });
     if (error) {
-      showToast('Directory search is temporarily unavailable.');
+      // Graceful fallback to ilike query if migration 020 has not yet been applied
+      const pattern = `%${normalizedQuery.replace(/[%_]/g, '\\$&')}%`;
+      const fallbackResult = await supabase
+        .from('profiles')
+        .select('*')
+        .or(`full_name.ilike.${pattern},headline.ilike.${pattern},location.ilike.${pattern}`)
+        .order('full_name')
+        .limit(50);
+      if (fallbackResult.error) {
+        showToast('Directory search is temporarily unavailable.');
+        return;
+      }
+      setDirectorySearchResults((fallbackResult.data || []).map((profile) => profileRowToDirectoryUser(profile as Record<string, unknown>)));
       return;
     }
-    setDirectorySearchResults((data || []).map((profile) => profileRowToDirectoryUser(profile as Record<string, unknown>)));
+    setDirectorySearchResults((data || []).map((profile: Record<string, unknown>) => profileRowToDirectoryUser(profile)));
   };
 
   const tabToPath: Record<MainTab, string> = {
@@ -630,6 +636,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return;
       }
       showToast('Connection request sent!');
+      void supabase.functions.invoke('send-notification-email', {
+        body: {
+          type: 'connection_request',
+          recipientId: userId,
+          requesterName: currentUser.name
+        }
+      }).catch(() => {});
     } catch {
       setWorkflowItems((prev) => prev.filter((item) => item.id !== workflowItem.id || item.status !== 'pending'));
       showToast('Could not send the connection request.');
@@ -658,6 +671,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (error) throw error;
       setIsMentorshipModalOpen(false);
       showToast('Mentorship request sent!');
+      void supabase.functions.invoke('send-notification-email', {
+        body: {
+          type: 'mentorship_request',
+          recipientId: request.mentorId,
+          requesterName: currentUser.name,
+          topic: request.topic
+        }
+      }).catch(() => {});
     } catch {
       setWorkflowItems((prev) => prev.filter((item) => item.id !== workflowItem.id));
       showToast('Could not send the mentorship request.');

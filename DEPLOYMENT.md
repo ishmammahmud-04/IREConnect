@@ -2,15 +2,25 @@
 
 ## Supabase
 
-Run migrations `001` through `019` in Supabase SQL Editor in numerical order. This creates core tables, authentication rules, media buckets, messaging, activity feeds, notification preferences, event RSVP support, and administrator policies.
+Run migrations `001` through `022` in Supabase SQL Editor in numerical order. This creates core tables, authentication rules, media buckets, messaging, activity feeds, notification preferences, event RSVP support, full-text search, public profiles, and administrator security policies.
 
-Deploy the admin function with the Supabase CLI from the project root:
+Deploy the edge functions with the Supabase CLI from the project root:
 
 ```powershell
 supabase functions deploy admin-action
+supabase functions deploy send-notification-email
 ```
 
-The function uses the platform-provided `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` secrets. Never put the service-role key in `.env` or browser code.
+The functions use platform-provided `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` secrets.
+
+### Email Notifications (Resend)
+For time-sensitive transactional emails (connection requests, mentorship requests, and deadline reminders):
+1. Sign up at [Resend](https://resend.com) and generate an API key.
+2. Set the following secrets in Supabase Dashboard > Edge Functions > Secrets (or via `supabase secrets set`):
+   - `RESEND_API_KEY`: Your Resend API key (e.g. `re_123...`)
+   - `NOTIFICATION_FROM_EMAIL`: Sender address (defaults to `IRE Network <notifications@resend.dev>`)
+   - `CRON_SECRET`: Optional secret token for scheduled cron triggering of deadline reminders
+3. To trigger deadline reminders automatically, schedule an HTTP POST to `https://<project-ref>.functions.supabase.co/send-notification-email` with header `x-cron-secret: <CRON_SECRET>` and payload `{"type":"check_deadlines"}` once daily via pg_cron or GitHub Actions.
 
 ## Frontend
 

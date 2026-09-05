@@ -112,7 +112,7 @@ export const DepartmentHub: React.FC = () => {
         </p>
       </div>
 
-      {((activeTab === 'announcements' || activeTab === 'events') || (canManageDepartment && activeTab === 'history')) && (
+      {(((canManageDepartment && activeTab === 'announcements') || activeTab === 'events') || (canManageDepartment && activeTab === 'history')) && (
         <div className="flex justify-end">
           <button type="button" onClick={() => isAdding ? resetForm() : setIsAdding(true)} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3.5 py-2 text-xs font-bold text-white hover:bg-slate-800">
             <span className="material-symbols-outlined text-[16px]">add</span>
@@ -129,7 +129,7 @@ export const DepartmentHub: React.FC = () => {
         </div>
       )}
 
-      {isAdding && ((activeTab === 'announcements' || activeTab === 'events') || canManageDepartment) && (
+      {isAdding && (((canManageDepartment && activeTab === 'announcements') || activeTab === 'events') || (canManageDepartment && activeTab === 'history')) && (
         <form onSubmit={submitDepartmentItem} className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
           <input aria-label={activeTab === 'history' ? 'Milestone title' : activeTab === 'events' ? 'Event or workshop title' : 'Announcement title'} required value={formTitle} onChange={(event) => setFormTitle(event.target.value)} placeholder={activeTab === 'history' ? 'Milestone title' : activeTab === 'events' ? 'Event or workshop title' : 'Announcement title'} className="h-9 w-full rounded-lg border border-slate-200 px-3 text-xs outline-none focus:border-blue-600" />
           <textarea aria-label="Description" required rows={3} value={formDescription} onChange={(event) => setFormDescription(event.target.value)} placeholder="Description" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs outline-none focus:border-blue-600" />

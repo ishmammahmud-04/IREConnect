@@ -18,6 +18,15 @@ export const OpportunitiesBoard: React.FC = () => {
 
   const types = ['All', 'Internship', 'Full-time Job', 'Research Position', 'Competition'];
 
+  const userSkills = currentUser.skills || [];
+
+  const getMatchedSkills = (opp: Opportunity) => {
+    const required = opp.requiredSkills || [];
+    return required.filter((skill) =>
+      userSkills.some((userSkill) => userSkill.trim().toLowerCase() === skill.trim().toLowerCase())
+    );
+  };
+
   const filteredOpps = opportunities.filter((opp) => {
     if (activeType !== 'All' && opp.type !== activeType) return false;
 
@@ -31,14 +40,147 @@ export const OpportunitiesBoard: React.FC = () => {
     if (!matchesSearch) return false;
 
     if (skillMatchOnly) {
-      const hasMatch = opp.requiredSkills.some((skill) =>
-        currentUser.skills.some((userSkill) => userSkill.toLowerCase() === skill.toLowerCase())
-      );
-      if (!hasMatch) return false;
+      const matched = getMatchedSkills(opp);
+      if (matched.length === 0) return false;
     }
 
     return true;
   });
+
+  // Recommended opportunities: at least one skill match, sorted descending by match count
+  const recommendedOpps = opportunities
+    .map((opp) => ({ opp, matchedSkills: getMatchedSkills(opp) }))
+    .filter(({ matchedSkills }) => matchedSkills.length > 0)
+    .sort((a, b) => b.matchedSkills.length - a.matchedSkills.length)
+    .map(({ opp }) => opp);
+
+  const renderOpportunityCard = (opp: Opportunity, isRecommendedCard = false) => {
+    const isSaved = isItemSaved(opp.id);
+    const requiredSkills = opp.requiredSkills || [];
+    const matchedSkills = getMatchedSkills(opp);
+
+    return (
+      <div
+        key={`${isRecommendedCard ? 'rec-' : ''}${opp.id}`}
+        onClick={() => setSelectedOpportunity(opp)}
+        className={`bg-white rounded-xl border p-4 md:p-5 shadow-2xs hover:shadow-xs transition-all cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-4 group ${
+          isRecommendedCard ? 'border-blue-200 ring-1 ring-blue-100' : 'border-slate-200'
+        }`}
+      >
+        <div className="flex items-start gap-3.5">
+          {opp.organizationLogo ? (
+            <img
+              src={opp.organizationLogo}
+              alt={opp.organization}
+              className="w-12 h-12 rounded-xl object-cover border border-slate-200 shrink-0"
+            />
+          ) : (
+            <div className="w-12 h-12 rounded-xl bg-slate-900 text-white font-bold text-base flex items-center justify-center shrink-0">
+              {opp.organization.charAt(0)}
+            </div>
+          )}
+
+          <div className="space-y-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 text-[10px] font-bold uppercase tracking-wider border border-indigo-200">
+                {opp.type}
+              </span>
+
+              {/* Badge: 3 of 5 skills match */}
+              {requiredSkills.length > 0 ? (
+                <span
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold border ${
+                    matchedSkills.length > 0
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : 'bg-slate-50 text-slate-600 border-slate-200'
+                  }`}
+                >
+                  {matchedSkills.length > 0 && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                  )}
+                  {matchedSkills.length} of {requiredSkills.length} skills match
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 rounded bg-slate-50 text-slate-500 text-[10px] font-medium border border-slate-200">
+                  Open to all skills
+                </span>
+              )}
+            </div>
+
+            <h2 className="font-heading text-[15px] font-bold text-slate-900 group-hover:text-blue-600 transition-colors leading-snug">
+              {opp.title}
+            </h2>
+
+            <p className="text-xs text-slate-700 font-medium">
+              {opp.organization} • <span className="font-normal text-slate-500">{opp.location}</span>
+            </p>
+
+            <p className="text-xs text-slate-600 line-clamp-2 max-w-2xl pt-0.5 leading-relaxed">
+              {opp.description}
+            </p>
+
+            <div className="flex flex-wrap gap-1 pt-1.5">
+              {requiredSkills.map((skill) => {
+                const isMatch = matchedSkills.some((s) => s.toLowerCase() === skill.toLowerCase());
+                return (
+                  <span
+                    key={skill}
+                    className={`px-2 py-0.5 rounded text-[10px] font-medium ${
+                      isMatch
+                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold'
+                        : 'bg-slate-100 text-slate-700 border border-slate-200/60'
+                    }`}
+                  >
+                    {skill}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Action Column */}
+        <div className="flex md:flex-col items-center md:items-end justify-between gap-2.5 pt-3 md:pt-0 border-t md:border-t-0 border-slate-100 shrink-0">
+          <div className="text-left md:text-right">
+            <span className="text-[10px] font-bold text-rose-600 uppercase tracking-wider block">
+              Deadline
+            </span>
+            <span className="text-xs font-mono font-bold text-slate-900">{opp.deadline}</span>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleSaveItem(opp.id);
+              }}
+              className={`p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors ${
+                isSaved ? 'text-blue-600 border-blue-300 bg-blue-50/50' : 'text-slate-500'
+              }`}
+              title={isSaved ? 'Bookmarked' : 'Save'}
+            >
+              <span
+                className="material-symbols-outlined text-[16px]"
+                style={{ fontVariationSettings: isSaved ? "'FILL' 1" : "'FILL' 0" }}
+              >
+                bookmark
+              </span>
+            </button>
+
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedOpportunity(opp);
+              }}
+              className="px-4 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition-all shadow-2xs"
+            >
+              Apply Now
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto animate-in fade-in duration-300 pb-16">
@@ -110,119 +252,43 @@ export const OpportunitiesBoard: React.FC = () => {
         </div>
       </div>
 
-      {/* Opportunities List */}
-      <div className="space-y-3">
-        {filteredOpps.map((opp) => {
-          const isSaved = isItemSaved(opp.id);
-          const userSkills = currentUser.skills || [];
-          const requiredSkills = opp.requiredSkills || [];
-          const matchedSkills = requiredSkills.filter((skill) =>
-            userSkills.some((userSkill) => userSkill.toLowerCase() === skill.toLowerCase())
-          );
-
-          return (
-            <div
-              key={opp.id}
-              onClick={() => setSelectedOpportunity(opp)}
-              className="bg-white rounded-xl border border-slate-200 p-4 md:p-5 shadow-2xs hover:shadow-xs transition-all cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-4 group"
-            >
-              <div className="flex items-start gap-3.5">
-                {opp.organizationLogo ? (
-                  <img
-                    src={opp.organizationLogo}
-                    alt={opp.organization}
-                    className="w-12 h-12 rounded-xl object-cover border border-slate-200 shrink-0"
-                  />
-                ) : (
-                  <div className="w-12 h-12 rounded-xl bg-slate-900 text-white font-bold text-base flex items-center justify-center shrink-0">
-                    {opp.organization.charAt(0)}
-                  </div>
-                )}
-
-                <div className="space-y-1 min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 text-[10px] font-bold uppercase tracking-wider border border-indigo-200">
-                      {opp.type}
-                    </span>
-                    {matchedSkills.length > 0 && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-                        {matchedSkills.length} skill matches
-                      </span>
-                    )}
-                  </div>
-
-                  <h2 className="font-heading text-[15px] font-bold text-slate-900 group-hover:text-blue-600 transition-colors leading-snug">
-                    {opp.title}
-                  </h2>
-
-                  <p className="text-xs text-slate-700 font-medium">
-                    {opp.organization} • <span className="font-normal text-slate-500">{opp.location}</span>
-                  </p>
-
-                  <p className="text-xs text-slate-600 line-clamp-2 max-w-2xl pt-0.5 leading-relaxed">
-                    {opp.description}
-                  </p>
-
-                  <div className="flex flex-wrap gap-1 pt-1.5">
-                    {requiredSkills.map((skill) => {
-                      const isMatch = matchedSkills.includes(skill);
-                      return (
-                        <span
-                          key={skill}
-                          className={`px-2 py-0.5 rounded text-[10px] font-medium ${
-                            isMatch
-                              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold'
-                              : 'bg-slate-100 text-slate-700 border border-slate-200/60'
-                          }`}
-                        >
-                          {skill}
-                        </span>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Column */}
-              <div className="flex md:flex-col items-center md:items-end justify-between gap-2.5 pt-3 md:pt-0 border-t md:border-t-0 border-slate-100 shrink-0">
-                <div className="text-left md:text-right">
-                  <span className="text-[10px] font-bold text-rose-600 uppercase tracking-wider block">
-                    Deadline
-                  </span>
-                  <span className="text-xs font-mono font-bold text-slate-900">{opp.deadline}</span>
-                </div>
-
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleSaveItem(opp.id);
-                    }}
-                    className={`p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors ${
-                      isSaved ? 'text-blue-600 border-blue-300 bg-blue-50/50' : 'text-slate-500'
-                    }`}
-                    title={isSaved ? 'Bookmarked' : 'Save'}
-                  >
-                    <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: isSaved ? "'FILL' 1" : "'FILL' 0" }}>
-                      bookmark
-                    </span>
-                  </button>
-
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedOpportunity(opp);
-                    }}
-                    className="px-4 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition-all shadow-2xs"
-                  >
-                    Apply Now
-                  </button>
-                </div>
-              </div>
+      {/* Recommended for You Section (only if at least one opportunity has skill overlap) */}
+      {!searchQuery && activeType === 'All' && recommendedOpps.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-blue-600 text-[20px]">
+                auto_awesome
+              </span>
+              <h2 className="font-heading text-base font-bold text-slate-900">
+                Recommended for You
+              </h2>
+              <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[11px] font-bold border border-blue-200">
+                {recommendedOpps.length} matched
+              </span>
             </div>
-          );
-        })}
+            <span className="text-xs text-slate-500 font-medium hidden sm:inline">
+              Ranked by skill match
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            {recommendedOpps.slice(0, 3).map((opp) => renderOpportunityCard(opp, true))}
+          </div>
+        </div>
+      )}
+
+      {/* All / Filtered Opportunities List */}
+      <div className="space-y-3">
+        {!searchQuery && activeType === 'All' && recommendedOpps.length > 0 && (
+          <div className="pt-2">
+            <h2 className="font-heading text-sm font-bold text-slate-700 uppercase tracking-wider">
+              All Opportunities ({filteredOpps.length})
+            </h2>
+          </div>
+        )}
+
+        {filteredOpps.map((opp) => renderOpportunityCard(opp, false))}
       </div>
 
       {filteredOpps.length === 0 && (

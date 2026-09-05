@@ -26,6 +26,7 @@ import { NotificationsModal } from './components/NotificationsModal';
 import { ChatModal } from './components/ChatModal';
 import { AuthScreen } from './components/AuthScreen';
 import { AdminControlSuite } from './components/AdminControlSuite';
+import { PublicProfileView } from './components/PublicProfileView';
 import { supabase } from './lib/supabase';
 import { Achievement, Announcement, AppNotification, Article, DepartmentEvent, FeedComment, FeedReactionSummary, Opportunity, Project, Publication, User, WorkflowItem } from './types';
 
@@ -496,6 +497,12 @@ const AuthGate: React.FC = () => {
       })();
     };
   }, [session, hydrateNotifications, hydrateWorkflows]);
+
+  // Public profile routes are unauthenticated and render outside the auth shell
+  const publicProfileMatch = window.location.pathname.match(/^\/u\/([^/?#]+)/);
+  if (publicProfileMatch && publicProfileMatch[1]) {
+    return <PublicProfileView userId={decodeURIComponent(publicProfileMatch[1])} />;
+  }
 
   if (isLoading) return <main className="flex min-h-screen items-center justify-center bg-slate-100 text-sm font-semibold text-slate-600">Loading IRE Network…</main>;
   const isPasswordRecovery = new URLSearchParams(window.location.search).get('type') === 'recovery'

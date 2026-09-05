@@ -256,6 +256,19 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ userOverride, onBack }
             {isOwnProfile ? (
               <>
                 <button
+                  type="button"
+                  onClick={() => {
+                    const publicUrl = `${window.location.origin}/u/${user.id}`;
+                    navigator.clipboard.writeText(publicUrl)
+                      .then(() => showToast('Public profile link copied to clipboard!'))
+                      .catch(() => showToast('Could not copy link to clipboard.'));
+                  }}
+                  className="px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-xs font-bold hover:bg-blue-100 transition-colors flex items-center gap-1.5 shadow-2xs"
+                >
+                  <span className="material-symbols-outlined text-[15px]">share</span>
+                  <span>Copy Public Link</span>
+                </button>
+                <button
                   onClick={() => setIsSettingsModalOpen(true)}
                   className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-1.5"
                 >

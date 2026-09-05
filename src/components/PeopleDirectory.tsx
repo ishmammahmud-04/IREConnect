@@ -23,46 +23,37 @@ export const PeopleDirectory: React.FC = () => {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       void searchDirectoryUsers(searchQuery);
-    }, 250);
+    }, 300);
     return () => window.clearTimeout(timer);
   }, [searchQuery, searchDirectoryUsers]);
 
-  const filteredUsers = useMemo(() => (directorySearchResults || users || []).filter((u) => {
-    // Segment filter
-    if (activeSegment === 'students' && u.role !== 'student') return false;
-    if (activeSegment === 'alumni' && u.role !== 'alumni') return false;
-    if (activeSegment === 'faculty' && u.role !== 'faculty' && u.role !== 'former_faculty') return false;
+  const filteredUsers = useMemo(() => {
+    const sourceUsers = searchQuery.trim() ? (directorySearchResults ?? []) : (users || []);
+    return sourceUsers.filter((u) => {
+      // Segment filter
+      if (activeSegment === 'students' && u.role !== 'student') return false;
+      if (activeSegment === 'alumni' && u.role !== 'alumni') return false;
+      if (activeSegment === 'faculty' && u.role !== 'faculty' && u.role !== 'former_faculty') return false;
 
-    // Faculty current / former sub-filter
-    if (activeSegment === 'faculty') {
-      if (facultyStatusFilter === 'current' && u.role !== 'faculty') return false;
-      if (facultyStatusFilter === 'former' && u.role !== 'former_faculty') return false;
-    }
-    if (selectedRoleFilter !== 'All' && u.role !== selectedRoleFilter) return false;
+      // Faculty current / former sub-filter
+      if (activeSegment === 'faculty') {
+        if (facultyStatusFilter === 'current' && u.role !== 'faculty') return false;
+        if (facultyStatusFilter === 'former' && u.role !== 'former_faculty') return false;
+      }
+      if (selectedRoleFilter !== 'All' && u.role !== selectedRoleFilter) return false;
 
-    // Search query
-    const q = (searchQuery || '').toLowerCase();
-    const userSkills = u.skills || [];
-    const userSpecs = u.specialization || [];
-    const matchesSearch =
-      !q ||
-      (u.name && u.name.toLowerCase().includes(q)) ||
-      (u.headline && u.headline.toLowerCase().includes(q)) ||
-      userSkills.some((s) => s && s.toLowerCase().includes(q)) ||
-      userSpecs.some((s) => s && s.toLowerCase().includes(q)) ||
-      (u.location && u.location.toLowerCase().includes(q));
+      // Batch filter
+      if (selectedBatchFilter !== 'All' && u.batch !== selectedBatchFilter) return false;
+      if (selectedGraduationYear !== 'All' && String(u.graduationYear || u.batch || '') !== selectedGraduationYear) return false;
 
-    if (!matchesSearch) return false;
+      // Skill filter
+      const userSkills = u.skills || [];
+      const userSpecs = u.specialization || [];
+      if (selectedSkillFilter !== 'All' && !userSkills.includes(selectedSkillFilter) && !userSpecs.includes(selectedSkillFilter)) return false;
 
-    // Batch filter
-    if (selectedBatchFilter !== 'All' && u.batch !== selectedBatchFilter) return false;
-    if (selectedGraduationYear !== 'All' && String(u.graduationYear || u.batch || '') !== selectedGraduationYear) return false;
-
-    // Skill filter
-    if (selectedSkillFilter !== 'All' && !userSkills.includes(selectedSkillFilter) && !userSpecs.includes(selectedSkillFilter)) return false;
-
-    return true;
-  }), [activeSegment, directorySearchResults, facultyStatusFilter, searchQuery, selectedBatchFilter, selectedGraduationYear, selectedRoleFilter, selectedSkillFilter, users]);
+      return true;
+    });
+  }, [activeSegment, directorySearchResults, facultyStatusFilter, searchQuery, selectedBatchFilter, selectedGraduationYear, selectedRoleFilter, selectedSkillFilter, users]);
   const { batchOptions, graduationYearOptions } = useMemo(() => {
     const batches = new Set<string>();
     const years = new Set<string>();
