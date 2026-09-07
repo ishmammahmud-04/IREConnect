@@ -1,8 +1,3 @@
--- Migration 021: Privacy-preserving public profile function
--- Run after migrations 001-020 in Supabase SQL Editor.
-
--- Returns a sanitized JSON object for public profile consumption by anyone (including the 'anon' role).
--- Evaluates privacy settings and returns NULL for any field not marked 'public'.
 create or replace function public.get_public_profile(target_id uuid)
 returns jsonb
 language plpgsql
@@ -87,9 +82,7 @@ begin
   else
     public_publications := null;
   end if;
-
-  -- 6. Construct and return sanitized response
-  return jsonb_build_object(
+  return jsonb_build_object( 
     'id', p.user_id,
     'name', p.full_name,
     'role', p.role,

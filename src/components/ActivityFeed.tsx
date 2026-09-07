@@ -29,6 +29,7 @@ export const ActivityFeed: React.FC = () => {
     if (item.visibility === 'department') return users.find((u) => u.id === item.ownerId)?.department === currentUser.department;
     return item.visibility === 'connections' && item.ownerId ? getConnectionStatus(item.ownerId) === 'connected' : false;
   }).sort((a, b) => (publishedAt[b.id] || b.date || '').localeCompare(publishedAt[a.id] || a.date || '')).slice(0, 8), [projects, achievements, publications, articles, opportunities, announcements, currentUser, users, getConnectionStatus, publishedAt]);
+  const interactionEntryIds = useMemo(() => entries.map((entry) => entry.id).join(','), [entries]);
   const commentsByContentId = useMemo(() => {
     const grouped: Record<string, FeedComment[]> = {};
     feedComments.forEach((comment) => {
@@ -44,7 +45,7 @@ export const ActivityFeed: React.FC = () => {
       setInteractionError(null);
       return;
     }
-    const ids = entries.map((entry) => entry.id);
+    const ids = interactionEntryIds ? interactionEntryIds.split(',') : [];
     let isCurrent = true;
     setInteractionState('loading');
     setInteractionError(null);
@@ -80,7 +81,7 @@ export const ActivityFeed: React.FC = () => {
     return () => {
       isCurrent = false;
     };
-  }, [entries, currentUser.id, interactionRetry]);
+  }, [interactionEntryIds, currentUser.id, interactionRetry, hydrateFeedInteractions]);
 
   const openEntry = (entry: FeedEntry) => {
     if (entry.type === 'project') setSelectedProject(projects.find((item) => item.id === entry.id) || null);
