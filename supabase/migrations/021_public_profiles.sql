@@ -99,10 +99,10 @@ begin
     'email', case when can_email then auth_email else null end,
     'cvUrl', case when can_cv then p.cv_url else null end,
     'experience', case when can_experience then p.experience else null end,
-    'externalLinks', public_links,
+    'externallinks', public_links, 
     'projects', public_projects,
-    'achievements', public_achievements,
-    'publications', public_publications
+    'achievemnets', public_achievements,
+    'publications', public_publications,
   );
 end;
 $$;
